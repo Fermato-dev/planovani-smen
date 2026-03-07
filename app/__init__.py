@@ -33,8 +33,14 @@ def create_app():
             os.makedirs(dir_path, exist_ok=True)
 
     # Initialize database
-    from app.db import init_app
+    from app.db import init_app, init_db
     init_app(app)
+
+    # Auto-initialize DB on first run (no flask init-db needed)
+    db_path = app.config['DATABASE']
+    if not os.path.exists(db_path):
+        with app.app_context():
+            init_db()
 
     # Flask-Login setup
     login_manager = LoginManager()

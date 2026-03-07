@@ -19,7 +19,7 @@ def get_db():
 def _migrate_db(db):
     """Run lightweight migrations for schema changes."""
     cols = [r[1] for r in db.execute("PRAGMA table_info(employees)").fetchall()]
-    if 'email' not in cols:
+    if cols and 'email' not in cols:
         db.execute("ALTER TABLE employees ADD COLUMN email TEXT DEFAULT ''")
         db.commit()
 
