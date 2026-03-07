@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environment
+.venv/
+venv/
+ENV/
+env/
+
+# IDEs
+.vscode/
+.claude/
+.idea/
+
+# SQLite database
+instance/*.db
+
+# Uploads / exports
+instance/uploads/
+instance/exports/
+
+# Logs
+*.log
+
+# Other
+*.xlsx
