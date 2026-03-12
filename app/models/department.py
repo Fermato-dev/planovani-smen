@@ -40,6 +40,16 @@ def update_department(dept_id, **kwargs):
 
 def delete_department(dept_id):
     db = get_db()
+    # Clear references in related tables before soft-deleting
+    db.execute("UPDATE assignments SET department_id = NULL WHERE department_id = ?", (dept_id,))
+    db.execute("UPDATE employee_default_pattern SET department_id = NULL WHERE department_id = ?", (dept_id,))
+    db.execute("DELETE FROM employee_qualifications WHERE department_id = ?", (dept_id,))
+    # Also nullify task references for tasks belonging to this department
+    task_ids = [r['id'] for r in db.execute("SELECT id FROM tasks WHERE department_id = ?", (dept_id,)).fetchall()]
+    for tid in task_ids:
+        db.execute("UPDATE assignments SET task_id = NULL WHERE task_id = ?", (tid,))
+        db.execute("UPDATE employee_default_pattern SET task_id = NULL WHERE task_id = ?", (tid,))
+        db.execute("DELETE FROM employee_qualifications WHERE task_id = ?", (tid,))
     db.execute("UPDATE departments SET active = 0 WHERE id = ?", (dept_id,))
     db.commit()
 
@@ -90,3 +100,13 @@ def update_task(task_id, **kwargs):
         values.append(task_id)
         db.execute(f"UPDATE tasks SET {', '.join(fields)} WHERE id = ?", values)
         db.commit()
+
+
+def delete_task(task_id):
+    db = get_db()
+    # Clear references in related tables before deleting
+    db.execute("UPDATE assignments SET task_id = NULL WHERE task_id = ?", (task_id,))
+    db.execute("UPDATE employee_default_pattern SET task_id = NULL WHERE task_id = ?", (task_id,))
+    db.execute("DELETE FROM employee_qualifications WHERE task_id = ?", (task_id,))
+    db.execute("DELETE FROM tasks WHERE id = ?", (task_id,))
+    db.commit()

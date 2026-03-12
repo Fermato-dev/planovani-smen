@@ -45,5 +45,9 @@ def update_shift(shift_id, **kwargs):
 
 def delete_shift(shift_id):
     db = get_db()
+    # Clear references in related tables before deleting
+    db.execute("UPDATE assignments SET shift_template_id = NULL WHERE shift_template_id = ?", (shift_id,))
+    db.execute("UPDATE employee_default_pattern SET shift_template_id = NULL WHERE shift_template_id = ?", (shift_id,))
+    db.execute("UPDATE employees SET default_shift_id = NULL WHERE default_shift_id = ?", (shift_id,))
     db.execute("DELETE FROM shift_templates WHERE id = ?", (shift_id,))
     db.commit()

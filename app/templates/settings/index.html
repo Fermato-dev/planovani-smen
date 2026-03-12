@@ -184,6 +184,12 @@
                                         <i class="bi bi-{{ 'eye-slash' if task.active else 'eye' }}"></i>
                                     </button>
                                 </form>
+                                <form method="POST" action="{{ url_for('settings.task_delete', task_id=task.id) }}" class="d-inline"
+                                      onsubmit="return confirm('Opravdu smazat práci {{ task.name }}? Reference v plánech budou odstraněny.')">
+                                    <button class="btn btn-action btn-outline-danger">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
                             </td>
                         </tr>
 

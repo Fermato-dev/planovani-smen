@@ -5,7 +5,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 logger = logging.getLogger(__name__)
 from app.models.department import (
     get_all_departments, get_department, create_department, update_department, delete_department,
-    get_tasks_for_department, get_all_tasks, create_task, update_task, get_task
+    get_tasks_for_department, get_all_tasks, create_task, update_task, get_task, delete_task
 )
 from app.models.shift import get_all_shifts, get_shift, create_shift, update_shift, delete_shift
 from app.models.app_settings import get_smtp_settings, save_smtp_settings, get_setting, set_setting
@@ -105,6 +105,17 @@ def task_toggle(task_id):
     if t:
         update_task(task_id, active=0 if t['active'] else 1)
         flash(f'Práce "{t["name"]}" {"deaktivována" if t["active"] else "aktivována"}.', 'success')
+    return redirect(url_for('settings.index'))
+
+
+@bp.route('/task/<int:task_id>/delete', methods=['POST'])
+def task_delete(task_id):
+    try:
+        t = get_task(task_id)
+        delete_task(task_id)
+        flash(f'Práce "{t["name"]}" smazána.', 'success') if t else None
+    except Exception as e:
+        flash(f'Chyba: {e}', 'error')
     return redirect(url_for('settings.index'))
 
 
