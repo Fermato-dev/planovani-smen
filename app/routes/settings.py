@@ -1,5 +1,8 @@
 import smtplib
+import logging
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+
+logger = logging.getLogger(__name__)
 from app.models.department import (
     get_all_departments, get_department, create_department, update_department, delete_department,
     get_tasks_for_department, get_all_tasks, create_task, update_task, get_task
@@ -172,22 +175,34 @@ def smtp_save():
             try:
                 port = int(smtp['port'])
                 use_tls = smtp['use_tls']
+                logger.info(f"SMTP test: server={smtp['server']}, port={port}, use_tls={use_tls}, user={test_user}")
 
                 if port == 465 or use_tls == 'ssl':
-                    srv = smtplib.SMTP_SSL(smtp['server'], port, timeout=10)
-                    srv.ehlo()
+                    logger.info("Using SMTP_SSL")
+                    srv = smtplib.SMTP_SSL(smtp['server'], port, timeout=15)
                 else:
-                    srv = smtplib.SMTP(smtp['server'], port, timeout=10)
-                    srv.ehlo()
-                    if use_tls != 'false':
-                        srv.starttls()
-                        srv.ehlo()
+                    logger.info("Using SMTP plain connect")
+                    srv = smtplib.SMTP(smtp['server'], port, timeout=15)
 
+                srv.set_debuglevel(1)
+                resp = srv.ehlo()
+                logger.info(f"EHLO response: {resp}")
+
+                if port != 465 and use_tls != 'false' and use_tls != 'ssl':
+                    logger.info("Starting STARTTLS")
+                    srv.starttls()
+                    resp2 = srv.ehlo()
+                    logger.info(f"EHLO after STARTTLS: {resp2}")
+
+                logger.info("Attempting login...")
                 srv.login(test_user, test_pass)
+                logger.info("Login successful!")
                 flash(f'Připojení k {smtp["server"]}:{port} úspěšné! ✓', 'success')
-            except smtplib.SMTPAuthenticationError:
+            except smtplib.SMTPAuthenticationError as e:
+                logger.error(f"SMTP auth error: {e}")
                 flash('Chyba autentizace — zkontrolujte uživatele a heslo (u Gmailu použijte App Password).', 'error')
             except Exception as e:
+                logger.error(f"SMTP error: {type(e).__name__}: {e}", exc_info=True)
                 flash(f'Připojení selhalo: {type(e).__name__}: {e}', 'error')
             finally:
                 if srv:
