@@ -115,7 +115,8 @@ def task_delete(task_id):
         delete_task(task_id)
         flash(f'Práce "{t["name"]}" smazána.', 'success') if t else None
     except Exception as e:
-        flash(f'Chyba: {e}', 'error')
+        logger.error(f"Task delete error: {e}", exc_info=True)
+        flash(f'Chyba při mazání práce: {e}', 'error')
     return redirect(url_for('settings.index'))
 
 
@@ -152,10 +153,12 @@ def shift_edit(shift_id):
 @bp.route('/shift/<int:shift_id>/delete', methods=['POST'])
 def shift_delete(shift_id):
     try:
+        s = get_shift(shift_id)
         delete_shift(shift_id)
-        flash('Směna smazána.', 'success')
+        flash(f'Směna "{s["name"]}" smazána.', 'success') if s else None
     except Exception as e:
-        flash(f'Chyba: {e}', 'error')
+        logger.error(f"Shift delete error: {e}", exc_info=True)
+        flash(f'Chyba při mazání směny: {e}', 'error')
     return redirect(url_for('settings.index'))
 
 
