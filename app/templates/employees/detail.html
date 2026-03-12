@@ -184,21 +184,25 @@
 <script>
 const patternData = {{ pattern_json|default('{}')|safe }};
 
-function loadTasks(deptSelect, day) {
+function loadTasks(deptSelect, day, forceTaskId) {
     const deptId = deptSelect.value;
     const taskSelect = document.querySelector('[name="day_' + day + '_task"]');
     if (!deptId) {
         taskSelect.innerHTML = '<option value="">—</option>';
-        return;
+        return Promise.resolve();
     }
-    fetch('/employees/api/tasks/' + deptId)
+    return fetch('/employees/api/tasks/' + deptId)
         .then(r => r.text())
         .then(html => {
             taskSelect.innerHTML = html;
-            // Pre-select saved task if exists
-            const saved = patternData[String(day)];
-            if (saved && saved.task_id) {
-                taskSelect.value = saved.task_id;
+            // If forceTaskId provided (from bulk), use that; otherwise use saved pattern
+            if (forceTaskId) {
+                taskSelect.value = forceTaskId;
+            } else {
+                const saved = patternData[String(day)];
+                if (saved && saved.task_id) {
+                    taskSelect.value = saved.task_id;
+                }
             }
         });
 }
@@ -222,7 +226,7 @@ function toggleBulkDays(checked) {
     document.querySelectorAll('.bulk-day-check').forEach(cb => cb.checked = checked);
 }
 
-function applyBulk() {
+async function applyBulk() {
     const shiftVal = document.getElementById('bulk_shift').value;
     const deptVal = document.getElementById('bulk_dept').value;
     const taskVal = document.getElementById('bulk_task').value;
@@ -235,33 +239,26 @@ function applyBulk() {
 
     if (checkedDays.length === 0) return;
 
-    checkedDays.forEach(day => {
+    const promises = checkedDays.map(async (day) => {
         // Apply shift if selected
         if (shiftVal) {
             const shiftSel = document.querySelector('[name="day_' + day + '_shift"]');
             if (shiftSel) shiftSel.value = shiftVal;
         }
-        // Apply department if selected
+        // Apply department if selected — load tasks and set task value
         if (deptVal) {
             const deptSel = document.querySelector('[name="day_' + day + '_dept"]');
             if (deptSel) {
                 deptSel.value = deptVal;
-                // Load tasks for this day, then set task value
-                loadTasks(deptSel, day);
-                if (taskVal) {
-                    // Wait for tasks to load, then set
-                    setTimeout(() => {
-                        const taskSel = document.querySelector('[name="day_' + day + '_task"]');
-                        if (taskSel) taskSel.value = taskVal;
-                    }, 300);
-                }
+                await loadTasks(deptSel, day, taskVal || null);
             }
         } else if (taskVal) {
-            // Just task without dept change
             const taskSel = document.querySelector('[name="day_' + day + '_task"]');
             if (taskSel) taskSel.value = taskVal;
         }
     });
+
+    await Promise.all(promises);
 }
 
 // On page load, populate task selects for saved patterns
