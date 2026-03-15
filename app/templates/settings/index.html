@@ -8,7 +8,7 @@
 
 <ul class="nav nav-tabs mb-3" role="tablist">
     <li class="nav-item">
-        <button class="nav-link {{ 'active' if active_tab != 'email' }}" data-bs-toggle="tab" data-bs-target="#tab-departments">
+        <button class="nav-link {{ 'active' if active_tab not in ('email', 'requirements') }}" data-bs-toggle="tab" data-bs-target="#tab-departments">
             <i class="bi bi-building"></i> Oddělení
         </button>
     </li>
@@ -23,6 +23,11 @@
         </button>
     </li>
     <li class="nav-item">
+        <button class="nav-link {{ 'active' if active_tab == 'requirements' }}" data-bs-toggle="tab" data-bs-target="#tab-requirements">
+            <i class="bi bi-calendar-check"></i> Požadavky na dny
+        </button>
+    </li>
+    <li class="nav-item">
         <button class="nav-link {{ 'active' if active_tab == 'email' }}" data-bs-toggle="tab" data-bs-target="#tab-email">
             <i class="bi bi-envelope"></i> Email
         </button>
@@ -31,7 +36,7 @@
 
 <div class="tab-content">
     <!-- DEPARTMENTS TAB -->
-    <div class="tab-pane fade {{ 'show active' if active_tab != 'email' }}" id="tab-departments">
+    <div class="tab-pane fade {{ 'show active' if active_tab not in ('email', 'requirements') }}" id="tab-departments">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span>Oddělení (úseky)</span>
@@ -337,6 +342,128 @@
         </div>
     </div>
 
+    <!-- REQUIREMENTS TAB -->
+    <div class="tab-pane fade {{ 'show active' if active_tab == 'requirements' }}" id="tab-requirements">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Minimální počty na práci pro konkrétní datum / období</span>
+                <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addReqModal">
+                    <i class="bi bi-plus-lg"></i> Přidat
+                </button>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Oddělení / Práce</th>
+                            <th>Od</th>
+                            <th>Do</th>
+                            <th>Min lidí</th>
+                            <th>Poznámka</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for req in requirements %}
+                        <tr>
+                            <td>
+                                <span class="dept-badge-sm" style="background-color: #{{ req.dept_color }}">{{ req.dept_name }}</span>
+                                {{ req.task_name }}
+                            </td>
+                            <td>{{ req.date_from | czdate }}</td>
+                            <td>{{ req.date_to | czdate if req.date_to else '—' }}</td>
+                            <td>
+                                {% if req.min_staff == 0 %}
+                                    <span class="badge bg-secondary">nepotřeba</span>
+                                {% else %}
+                                    <strong>{{ req.min_staff }}</strong>
+                                {% endif %}
+                            </td>
+                            <td class="text-muted small">{{ req.note or '' }}</td>
+                            <td class="text-end">
+                                <button class="btn btn-action btn-outline-primary"
+                                        data-bs-toggle="modal" data-bs-target="#editReqModal{{ req.id }}">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <form method="POST" action="{{ url_for('settings.requirement_delete', req_id=req.id) }}" class="d-inline"
+                                      onsubmit="return confirm('Smazat tento požadavek?')">
+                                    <button class="btn btn-action btn-outline-danger">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+
+                        <!-- Edit Requirement Modal -->
+                        <div class="modal fade" id="editReqModal{{ req.id }}" tabindex="-1">
+                            <div class="modal-dialog">
+                                <form method="POST" action="{{ url_for('settings.requirement_edit', req_id=req.id) }}">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Upravit požadavek</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="row g-2">
+                                                <div class="col-12">
+                                                    <label class="form-label">Práce</label>
+                                                    <select name="task_id" class="form-select" required>
+                                                        {% for task in tasks %}
+                                                        {% if task.active %}
+                                                        <option value="{{ task.id }}" {{ 'selected' if task.id == req.task_id }}>
+                                                            {{ task.dept_name }} / {{ task.name }}
+                                                        </option>
+                                                        {% endif %}
+                                                        {% endfor %}
+                                                    </select>
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="form-label">Platí od</label>
+                                                    <input type="date" name="date_from" class="form-control" value="{{ req.date_from }}" required>
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="form-label">Platí do <small class="text-muted">(prázdné = dále)</small></label>
+                                                    <input type="date" name="date_to" class="form-control" value="{{ req.date_to or '' }}">
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="form-label">Min lidí <small class="text-muted">(0 = nepotřeba)</small></label>
+                                                    <input type="number" name="min_staff" class="form-control" value="{{ req.min_staff }}" min="0">
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="form-label">Poznámka</label>
+                                                    <input type="text" name="note" class="form-control" value="{{ req.note or '' }}" placeholder="volitelně">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Zrušit</button>
+                                            <button type="submit" class="btn btn-primary">Uložit</button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                {% if not requirements %}
+                <div class="empty-state">
+                    <i class="bi bi-calendar-check d-block"></i>
+                    <p>Zatím žádné datumové požadavky.<br>
+                    <small class="text-muted">Přidejte požadavek, pokud se na určitý den / období liší minimální obsazení práce od výchozího.</small></p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="alert alert-info mt-3 py-2">
+            <i class="bi bi-info-circle"></i>
+            Požadavky přepisují výchozí <strong>Min lidí</strong> nastavenou u práce.
+            Pokud se záznamy překrývají, platí ten s nejpozdějším <em>Platí od</em>.
+            Min&nbsp;=&nbsp;0 znamená, že práce ten den v plánu <strong>nebude zobrazena</strong> v řádku obsazení.
+        </div>
+    </div>
+
     <!-- EMAIL TAB -->
     <div class="tab-pane fade {{ 'show active' if active_tab == 'email' }}" id="tab-email">
         <div class="card">
@@ -496,6 +623,55 @@
                         <div class="col-6">
                             <label class="form-label">Max lidí</label>
                             <input type="number" name="max_staff" class="form-control" value="99" min="0">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Zrušit</button>
+                    <button type="submit" class="btn btn-primary">Přidat</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ADD REQUIREMENT MODAL -->
+<div class="modal fade" id="addReqModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST" action="{{ url_for('settings.requirement_add') }}">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Nový požadavek na obsazení</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-2">
+                        <div class="col-12">
+                            <label class="form-label">Práce</label>
+                            <select name="task_id" class="form-select" required>
+                                <option value="">-- Vyberte práci --</option>
+                                {% for task in tasks %}
+                                {% if task.active %}
+                                <option value="{{ task.id }}">{{ task.dept_name }} / {{ task.name }}</option>
+                                {% endif %}
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Platí od</label>
+                            <input type="date" name="date_from" class="form-control" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Platí do <small class="text-muted">(prázdné = dále)</small></label>
+                            <input type="date" name="date_to" class="form-control">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Min lidí <small class="text-muted">(0 = nepotřeba)</small></label>
+                            <input type="number" name="min_staff" class="form-control" value="1" min="0">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Poznámka</label>
+                            <input type="text" name="note" class="form-control" placeholder="volitelně">
                         </div>
                     </div>
                 </div>

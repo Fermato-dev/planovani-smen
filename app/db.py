@@ -46,6 +46,20 @@ def _migrate_db(db):
     """)
     db.commit()
 
+    # Ensure task_date_requirements table exists
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS task_date_requirements (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            task_id INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+            date_from DATE NOT NULL,
+            date_to DATE,
+            min_staff INTEGER NOT NULL DEFAULT 0,
+            note TEXT DEFAULT '',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    db.commit()
+
 
 def close_db(e=None):
     db = g.pop('db', None)
