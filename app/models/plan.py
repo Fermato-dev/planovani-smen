@@ -186,19 +186,39 @@ def get_day_summary(plan_id, date):
 
 
 def get_day_task_summary(plan_id, date):
-    """Get task-level staffing counts for a specific day (only tasks with min_staff > 0)."""
+    """Get task-level staffing counts for a specific day.
+
+    Uses task_date_requirements override when available for that date,
+    otherwise falls back to tasks.min_staff. Only shows tasks with effective min > 0.
+    """
     db = get_db()
     return db.execute(
-        """SELECT t.id, t.name, t.department_id, t.min_staff, t.max_staff,
+        """SELECT t.id, t.name, t.department_id, t.max_staff,
                   d.name as dept_name, d.color as dept_color,
-                  COUNT(a.id) as staff_count
+                  COUNT(a.id) as staff_count,
+                  COALESCE(
+                      (SELECT r.min_staff FROM task_date_requirements r
+                       WHERE r.task_id = t.id
+                         AND r.date_from <= :date
+                         AND (r.date_to IS NULL OR r.date_to >= :date)
+                       ORDER BY r.date_from DESC LIMIT 1),
+                      t.min_staff
+                  ) as min_staff
            FROM tasks t
            JOIN departments d ON t.department_id = d.id
            LEFT JOIN assignments a ON a.task_id = t.id
-                AND a.plan_id = ? AND a.date = ?
+                AND a.plan_id = :plan_id AND a.date = :date
                 AND (a.is_absence = 0 OR (a.is_absence = 1 AND a.task_id IS NOT NULL))
-           WHERE t.active = 1 AND d.active = 1 AND t.min_staff > 0
+           WHERE t.active = 1 AND d.active = 1
+             AND COALESCE(
+                     (SELECT r.min_staff FROM task_date_requirements r
+                      WHERE r.task_id = t.id
+                        AND r.date_from <= :date
+                        AND (r.date_to IS NULL OR r.date_to >= :date)
+                      ORDER BY r.date_from DESC LIMIT 1),
+                     t.min_staff
+                 ) > 0
            GROUP BY t.id
            ORDER BY d.sort_order, t.name""",
-        (plan_id, date)
+        {'plan_id': plan_id, 'date': date}
     ).fetchall()

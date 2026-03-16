@@ -109,6 +109,17 @@ CREATE TABLE IF NOT EXISTS constraints (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Požadavky na obsazení práce pro konkrétní datum / rozsah
+CREATE TABLE IF NOT EXISTS task_date_requirements (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    task_id INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+    date_from DATE NOT NULL,
+    date_to DATE,           -- NULL = platí od date_from dále
+    min_staff INTEGER NOT NULL DEFAULT 0,
+    note TEXT DEFAULT '',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Uživatelé (přihlášení)
 CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

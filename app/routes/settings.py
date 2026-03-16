@@ -9,6 +9,9 @@ from app.models.department import (
 )
 from app.models.shift import get_all_shifts, get_shift, create_shift, update_shift, delete_shift
 from app.models.app_settings import get_smtp_settings, save_smtp_settings, get_setting, set_setting
+from app.models.task_requirement import (
+    get_all_requirements, get_requirement, create_requirement, update_requirement, delete_requirement
+)
 
 bp = Blueprint('settings', __name__, url_prefix='/settings')
 
@@ -21,9 +24,11 @@ def index():
     tasks = get_all_tasks(active_only=False)
     smtp = get_smtp_settings()
     resend_key = get_setting('resend_api_key', '') or os.environ.get('RESEND_API_KEY', '')
+    requirements = get_all_requirements()
     return render_template('settings/index.html',
                            departments=departments, shifts=shifts, tasks=tasks,
-                           smtp=smtp, resend_key=resend_key, active_tab=active_tab)
+                           smtp=smtp, resend_key=resend_key, requirements=requirements,
+                           active_tab=active_tab)
 
 
 # --- Departments ---
@@ -160,6 +165,45 @@ def shift_delete(shift_id):
         logger.error(f"Shift delete error: {e}", exc_info=True)
         flash(f'Chyba při mazání směny: {e}', 'error')
     return redirect(url_for('settings.index'))
+
+
+# --- Task Date Requirements ---
+
+@bp.route('/requirement/add', methods=['POST'])
+def requirement_add():
+    task_id = int(request.form.get('task_id', 0))
+    date_from = request.form.get('date_from', '').strip()
+    date_to = request.form.get('date_to', '').strip() or None
+    min_staff = int(request.form.get('min_staff', 0))
+    note = request.form.get('note', '').strip()
+    if not task_id or not date_from:
+        flash('Vyberte práci a zadejte datum od.', 'error')
+        return redirect(url_for('settings.index', tab='requirements'))
+    try:
+        create_requirement(task_id, date_from, date_to, min_staff, note)
+        flash('Požadavek přidán.', 'success')
+    except Exception as e:
+        flash(f'Chyba: {e}', 'error')
+    return redirect(url_for('settings.index', tab='requirements'))
+
+
+@bp.route('/requirement/<int:req_id>/edit', methods=['POST'])
+def requirement_edit(req_id):
+    task_id = int(request.form.get('task_id', 0))
+    date_from = request.form.get('date_from', '').strip()
+    date_to = request.form.get('date_to', '').strip() or None
+    min_staff = int(request.form.get('min_staff', 0))
+    note = request.form.get('note', '').strip()
+    update_requirement(req_id, task_id, date_from, date_to, min_staff, note)
+    flash('Požadavek aktualizován.', 'success')
+    return redirect(url_for('settings.index', tab='requirements'))
+
+
+@bp.route('/requirement/<int:req_id>/delete', methods=['POST'])
+def requirement_delete(req_id):
+    delete_requirement(req_id)
+    flash('Požadavek smazán.', 'success')
+    return redirect(url_for('settings.index', tab='requirements'))
 
 
 # --- Email (Resend API) ---
