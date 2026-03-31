@@ -893,3 +893,13 @@ main.container-fluid > .row > *:nth-child(3) { animation-delay: 0.15s; }
     .planner-grid .emp-name { background: white; }
     .planner-grid th.day-col { background: white; }
 }
+
+/* ── Bootstrap subtle overrides ──────────── */
+.bg-success-subtle { background-color: rgba(16, 185, 129, 0.12) !important; }
+.bg-danger-subtle { background-color: rgba(239, 68, 68, 0.12) !important; }
+.bg-warning-subtle { background-color: rgba(245, 158, 11, 0.12) !important; }
+.bg-info-subtle { background-color: rgba(139, 92, 246, 0.12) !important; }
+.text-success { color: var(--fm-success) !important; }
+.text-danger { color: var(--fm-danger) !important; }
+.text-warning { color: var(--fm-warning) !important; }
+.text-info { color: var(--fm-info) !important; }
