@@ -1,4 +1,10 @@
-{% extends "base.html" %}
+import subprocess
+
+def resolve_path(p):
+    r = subprocess.run(['cygpath', '-w', p], capture_output=True, text=True)
+    return r.stdout.strip()
+
+content = """{% extends "base.html" %}
 {% block title %}Prehled{% endblock %}
 
 {% block content %}
@@ -15,7 +21,7 @@
             <i class="bi bi-people stat-card-icon"></i>
             <div class="stat-card-number">{{ employees|length }}</div>
             <div class="stat-card-label">Aktivnich zamestnancu</div>
-            <a href="{{ url_for('employees.index') }}" class="btn btn-sm btn-outline-primary mt-3">
+            <a href="{{ url_for(Qemployees.indexQ) }}" class="btn btn-sm btn-outline-primary mt-3">
                 <i class="bi bi-people"></i> Spravovat
             </a>
         </div>
@@ -25,7 +31,7 @@
             <i class="bi bi-building stat-card-icon"></i>
             <div class="stat-card-number">{{ departments|length }}</div>
             <div class="stat-card-label">Oddeleni</div>
-            <a href="{{ url_for('settings.index') }}" class="btn btn-sm btn-outline-success mt-3">
+            <a href="{{ url_for(Qsettings.indexQ) }}" class="btn btn-sm btn-outline-success mt-3">
                 <i class="bi bi-gear"></i> Nastaveni
             </a>
         </div>
@@ -35,7 +41,7 @@
             <i class="bi bi-clock stat-card-icon"></i>
             <div class="stat-card-number">{{ shifts|length }}</div>
             <div class="stat-card-label">Typy smen</div>
-            <a href="{{ url_for('settings.index') }}" class="btn btn-sm btn-outline-info mt-3">
+            <a href="{{ url_for(Qsettings.indexQ) }}" class="btn btn-sm btn-outline-info mt-3">
                 <i class="bi bi-clock"></i> Nastaveni
             </a>
         </div>
@@ -50,13 +56,13 @@
             </div>
             <div class="card-body">
                 <div class="d-flex gap-2 flex-wrap">
-                    <a href="{{ url_for('planner.index') }}" class="quick-action-btn primary">
+                    <a href="{{ url_for(Qplanner.indexQ) }}" class="quick-action-btn primary">
                         <i class="bi bi-table"></i> Otevrit planovac
                     </a>
-                    <a href="{{ url_for('employees.add') }}" class="quick-action-btn">
+                    <a href="{{ url_for(Qemployees.addQ) }}" class="quick-action-btn">
                         <i class="bi bi-person-plus"></i> Pridat zamestnance
                     </a>
-                    <a href="{{ url_for('settings.index') }}" class="quick-action-btn">
+                    <a href="{{ url_for(Qsettings.indexQ) }}" class="quick-action-btn">
                         <i class="bi bi-gear"></i> Nastaveni
                     </a>
                 </div>
@@ -74,11 +80,18 @@
             <p class="text-muted">
                 Pro zacatek zkontrolujte <strong>Nastaveni</strong> (oddeleni, smeny) a pak pridejte <strong>zamestnance</strong>.
             </p>
-            <a href="{{ url_for('settings.index') }}" class="btn btn-primary">
+            <a href="{{ url_for(Qsettings.indexQ) }}" class="btn btn-primary">
                 <i class="bi bi-gear"></i> Otevrit nastaveni
             </a>
         </div>
     </div>
 </div>
 {% endif %}
-{% endblock %}
+{% endblock %}"""
+
+content = content.replace('Q', chr(39))
+
+wp = resolve_path('/tmp/planovani-smen/app/templates/dashboard/index.html')
+with open(wp, 'w', encoding='utf-8') as f:
+    f.write(content)
+print(f"dashboard/index.html written: {len(content)} chars")

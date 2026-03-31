@@ -22,7 +22,7 @@
     background: var(--fm-primary-ghost);
 }
 .col-weekend {
-    background: rgba(139, 92, 246, 0.04);
+    background: rgba(139, 92, 246, 0.025);
 }
 .status-draft {
     background: var(--fm-abs-dovolena-bg);
@@ -159,8 +159,8 @@
 .email-step.done .step-num { background: #22c55e; color: #fff; }
 .email-step.overdue { background: #fef2f2; border-color: #fecaca; }
 .email-step.overdue .step-num { background: #ef4444; color: #fff; }
-.email-step.waiting { background: #ecfeff; border-color: #a5f3fc; }
-.email-step.waiting .step-num { background: var(--fm-primary); color: #fff; }
+.email-step.waiting { background: rgba(13, 148, 136, 0.06); border-color: rgba(13, 148, 136, 0.15); }
+.email-step.waiting .step-num { background: var(--fm-primary); color: #fff; box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.1); }
 .email-step.pending .step-num { background: var(--fm-bg-hover); color: var(--fm-text-muted); }
 .email-step.upcoming { background: #fffbeb; border-color: #fde68a; }
 .email-step.upcoming .step-num { background: #f59e0b; color: #fff; }
@@ -174,7 +174,7 @@
     font-size: 0.7rem; background: var(--fm-bg-hover); color: var(--fm-text-muted);
     border: 1px solid transparent;
 }
-.nearby-week.current { background: #ecfeff; color: var(--fm-primary); font-weight: 600; border-color: #a5f3fc; }
+.nearby-week.current { background: rgba(13, 148, 136, 0.06); color: var(--fm-primary); font-weight: 600; border-color: rgba(13, 148, 136, 0.15); }
 .nearby-week .nw-dot {
     display: inline-block; width: 0.45rem; height: 0.45rem;
     border-radius: 50%; flex-shrink: 0;
