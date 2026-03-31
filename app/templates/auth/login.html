@@ -11,16 +11,16 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <style>
         :root {
-            --fm-bg: #0c0e14;
-            --fm-bg-card: #181b27;
-            --fm-bg-input: #1a1d2b;
-            --fm-border: #262a3a;
-            --fm-text: #e4e8f1;
-            --fm-text-secondary: #8b92a8;
-            --fm-text-muted: #5a6178;
-            --fm-primary: #06b6d4;
+            --fm-bg: #f5f6f8;
+            --fm-bg-card: #ffffff;
+            --fm-bg-input: #f5f6f8;
+            --fm-border: #e2e5eb;
+            --fm-text: #1a1d26;
+            --fm-text-secondary: #5a5f72;
+            --fm-text-muted: #8b90a0;
+            --fm-primary: #0891b2;
             --fm-primary-dim: #0891b2;
-            --fm-primary-glow: rgba(6, 182, 212, 0.15);
+            --fm-primary-glow: rgba(8, 145, 178, 0.10);
             --fm-radius: 10px;
             --fm-radius-lg: 14px;
             --fm-font: 'Plus Jakarta Sans', system-ui, sans-serif;
@@ -47,8 +47,8 @@
             position: fixed;
             inset: 0;
             background-image:
-                linear-gradient(rgba(6, 182, 212, 0.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(6, 182, 212, 0.03) 1px, transparent 1px);
+                linear-gradient(rgba(8, 145, 178, 0.07) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(8, 145, 178, 0.07) 1px, transparent 1px);
             background-size: 40px 40px;
             z-index: 0;
         }
@@ -61,7 +61,7 @@
             left: -20%;
             width: 80%;
             height: 80%;
-            background: radial-gradient(ellipse, rgba(6, 182, 212, 0.06) 0%, transparent 70%);
+            background: radial-gradient(ellipse, rgba(8, 145, 178, 0.06) 0%, transparent 70%);
             z-index: 0;
         }
 
@@ -85,7 +85,7 @@
             height: 56px;
             border-radius: 16px;
             background: var(--fm-primary-glow);
-            border: 1px solid rgba(6, 182, 212, 0.2);
+            border: 1px solid rgba(8, 145, 178, 0.15);
             margin-bottom: 1rem;
         }
         .login-brand-icon i {
@@ -110,8 +110,8 @@
             border-radius: var(--fm-radius-lg);
             padding: 2rem;
             box-shadow:
-                0 8px 32px rgba(0,0,0,0.4),
-                0 0 0 1px rgba(255,255,255,0.03) inset;
+                0 4px 16px rgba(0,0,0,0.06),
+                0 1px 3px rgba(0,0,0,0.04);
         }
 
         .login-card h5 {
@@ -150,7 +150,7 @@
         .btn-login {
             background: var(--fm-primary);
             border: none;
-            color: #000;
+            color: #fff;
             font-weight: 700;
             font-size: 0.88rem;
             padding: 0.7rem 1rem;
@@ -161,7 +161,7 @@
         }
         .btn-login:hover {
             background: var(--fm-primary-dim);
-            box-shadow: 0 0 24px var(--fm-primary-glow);
+            box-shadow: 0 2px 12px rgba(8, 145, 178, 0.2);
             transform: translateY(-1px);
         }
         .btn-login:active {
@@ -193,7 +193,7 @@
 
         ::selection {
             background: var(--fm-primary);
-            color: #000;
+            color: #fff;
         }
     </style>
 </head>
