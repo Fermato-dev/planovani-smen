@@ -14,11 +14,12 @@ def panel(plan_id, day_date):
     """HTMX: vrátí formulář pro plán práce (obě sekce) daného dne."""
     lahvovani, lah_default = get_entries_or_default(plan_id, day_date, 'lahvovani')
     priprava, prep_default = get_entries_or_default(plan_id, day_date, 'priprava')
+    koreni, kor_default = get_entries_or_default(plan_id, day_date, 'koreni')
     employees = get_employees_for_day(plan_id, day_date)
     return render_template('planner/_work_plan_panel.html',
                            plan_id=plan_id, day_date=day_date,
-                           lahvovani=lahvovani, priprava=priprava,
-                           lah_default=lah_default, prep_default=prep_default,
+                           lahvovani=lahvovani, priprava=priprava, koreni=koreni,
+                           lah_default=lah_default, prep_default=prep_default, kor_default=kor_default,
                            employees=employees,
                            copied_from=None)
 
@@ -44,6 +45,7 @@ def save(plan_id, day_date):
 
     save_entries(plan_id, day_date, 'lahvovani', collect('lah_'))
     save_entries(plan_id, day_date, 'priprava', collect('prep_'))
+    save_entries(plan_id, day_date, 'koreni', collect('kor_'))
     return '', 200, {'HX-Trigger': 'workPlanSaved'}
 
 
@@ -52,12 +54,13 @@ def copy_prev(plan_id, day_date):
     """Zkopíruje obě sekce z předchozího dne (vrátí předvyplněný panel, neuloží)."""
     lahvovani, lah_from = copy_from_previous_day(plan_id, day_date, 'lahvovani')
     priprava, prep_from = copy_from_previous_day(plan_id, day_date, 'priprava')
-    copied_from = lah_from or prep_from
+    koreni, kor_from = copy_from_previous_day(plan_id, day_date, 'koreni')
+    copied_from = lah_from or prep_from or kor_from
     employees = get_employees_for_day(plan_id, day_date)
     return render_template('planner/_work_plan_panel.html',
                            plan_id=plan_id, day_date=day_date,
-                           lahvovani=lahvovani, priprava=priprava,
-                           lah_default=False, prep_default=False,
+                           lahvovani=lahvovani, priprava=priprava, koreni=koreni,
+                           lah_default=False, prep_default=False, kor_default=False,
                            employees=employees,
                            copied_from=copied_from)
 
@@ -67,10 +70,12 @@ def print_day(plan_id, day_date):
     """Tisková stránka plánu práce pro daný den."""
     lahvovani, _ = get_entries_or_default(plan_id, day_date, 'lahvovani')
     priprava, _ = get_entries_or_default(plan_id, day_date, 'priprava')
+    koreni, _ = get_entries_or_default(plan_id, day_date, 'koreni')
     employees = get_employees_for_day(plan_id, day_date)
     sections = [
         ('lahvovani', 'Lahvování', lahvovani),
         ('priprava', 'Příprava', priprava),
+        ('koreni', 'Koření', koreni),
     ]
     now = datetime.now().strftime('%d.%m.%Y %H:%M')
     return render_template('planner/work_plan_print.html',

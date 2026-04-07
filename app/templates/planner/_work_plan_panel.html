@@ -49,6 +49,12 @@
             {% if not prep_default %}<span class="badge bg-success ms-1" style="font-size:0.6rem">✓</span>{% endif %}
         </button>
     </li>
+    <li class="nav-item">
+        <button class="nav-link" type="button" data-bs-toggle="tab" data-bs-target="#wpTabKoreni">
+            🌿 Koření
+            {% if not kor_default %}<span class="badge bg-success ms-1" style="font-size:0.6rem">✓</span>{% endif %}
+        </button>
+    </li>
 </ul>
 
 <div class="tab-content modal-body p-0">
@@ -130,6 +136,38 @@
         </button>
     </div>
 
+    {# --- TAB: Koření --- #}
+    <div class="tab-pane fade p-2" id="wpTabKoreni">
+        <table class="table table-sm table-bordered mb-1 wp-table" id="korTable">
+            <thead class="table-light" style="font-size:0.7rem;">
+                <tr>
+                    <th style="width:72px">Od</th>
+                    <th style="width:72px">Do</th>
+                    <th style="width:160px">Produkt / koření</th>
+                    <th style="width:90px">Množství</th>
+                    <th>Poznámka / detail</th>
+                    <th style="width:26px"></th>
+                </tr>
+            </thead>
+            <tbody id="korRows">
+                {% for e in koreni %}
+                <tr class="wp-row">
+                    <td class="p-1"><input type="text" name="kor_time_from[]" class="form-control form-control-sm wp-time" value="{{ e.time_from }}" placeholder="06:00"></td>
+                    <td class="p-1"><input type="text" name="kor_time_to[]"   class="form-control form-control-sm wp-time" value="{{ e.time_to }}"   placeholder="08:00"></td>
+                    <input type="hidden" name="kor_line[]" value="{{ e.line }}">
+                    <td class="p-1"><input type="text" name="kor_product[]"  class="form-control form-control-sm" value="{{ e.product }}"  placeholder="druh koření"></td>
+                    <td class="p-1"><input type="text" name="kor_quantity[]" class="form-control form-control-sm" value="{{ e.quantity }}" placeholder="kg / ks"></td>
+                    <td class="p-1"><input type="text" name="kor_note[]"     class="form-control form-control-sm" value="{{ e.note }}"     placeholder="detail, poznámka…"></td>
+                    <td class="p-1 text-center align-middle"><button type="button" class="btn btn-sm btn-outline-danger wp-del" style="padding:1px 5px;font-size:0.7rem">×</button></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <button type="button" class="btn btn-sm btn-outline-secondary wp-add-row" data-target="korRows" data-prefix="kor">
+            <i class="bi bi-plus"></i> Přidat řádek
+        </button>
+    </div>
+
 </div>{# /tab-content #}
 
 <div class="modal-footer justify-content-between py-2">
@@ -171,10 +209,21 @@
     <tr class="wp-row">
         <td class="p-1"><input type="text" name="prep_time_from[]" class="form-control form-control-sm wp-time" placeholder="06:00"></td>
         <td class="p-1"><input type="text" name="prep_time_to[]"   class="form-control form-control-sm wp-time" placeholder="08:00"></td>
-        <td class="p-1"><select name="prep_line[]" class="form-select form-select-sm"><option value="">—</option><option value="Koření">Koření</option></select></td>
+        <td class="p-1"><select name="prep_line[]" class="form-select form-select-sm"><option value="">—</option></select></td>
         <td class="p-1"><input type="text" name="prep_product[]"  class="form-control form-control-sm" placeholder="produkt"></td>
         <td class="p-1"><input type="text" name="prep_quantity[]" class="form-control form-control-sm" placeholder="kotle / ks"></td>
         <td class="p-1"><input type="text" name="prep_note[]"     class="form-control form-control-sm" placeholder="detail, poznámka…"></td>
+        <td class="p-1 text-center align-middle"><button type="button" class="btn btn-sm btn-outline-danger wp-del" style="padding:1px 5px;font-size:0.7rem">×</button></td>
+    </tr>
+</template>
+<template id="korRowTmpl">
+    <tr class="wp-row">
+        <td class="p-1"><input type="text" name="kor_time_from[]" class="form-control form-control-sm wp-time" placeholder="06:00"></td>
+        <td class="p-1"><input type="text" name="kor_time_to[]"   class="form-control form-control-sm wp-time" placeholder="08:00"></td>
+        <input type="hidden" name="kor_line[]" value="">
+        <td class="p-1"><input type="text" name="kor_product[]"  class="form-control form-control-sm" placeholder="druh koření"></td>
+        <td class="p-1"><input type="text" name="kor_quantity[]" class="form-control form-control-sm" placeholder="kg / ks"></td>
+        <td class="p-1"><input type="text" name="kor_note[]"     class="form-control form-control-sm" placeholder="detail, poznámka…"></td>
         <td class="p-1 text-center align-middle"><button type="button" class="btn btn-sm btn-outline-danger wp-del" style="padding:1px 5px;font-size:0.7rem">×</button></td>
     </tr>
 </template>

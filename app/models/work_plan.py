@@ -17,12 +17,20 @@ DEFAULT_LAHVOVANI = [
 
 # Výchozí šablona – Příprava
 DEFAULT_PRIPRAVA = [
-    {'time_from': '06:00', 'time_to': '08:00', 'line': '',        'product': '', 'quantity': '', 'note': ''},
-    {'time_from': '08:00', 'time_to': '08:20', 'line': '',        'product': 'Porada / přestávka', 'quantity': '', 'note': ''},
-    {'time_from': '08:20', 'time_to': '11:30', 'line': '',        'product': '', 'quantity': '', 'note': ''},
-    {'time_from': '08:20', 'time_to': '11:30', 'line': 'Koření',  'product': '', 'quantity': '', 'note': ''},
-    {'time_from': '11:30', 'time_to': '12:00', 'line': '',        'product': 'Oběd', 'quantity': '', 'note': ''},
-    {'time_from': '12:00', 'time_to': '14:30', 'line': '',        'product': '', 'quantity': '', 'note': ''},
+    {'time_from': '06:00', 'time_to': '08:00', 'line': '', 'product': '', 'quantity': '', 'note': ''},
+    {'time_from': '08:00', 'time_to': '08:20', 'line': '', 'product': 'Porada / přestávka', 'quantity': '', 'note': ''},
+    {'time_from': '08:20', 'time_to': '11:30', 'line': '', 'product': '', 'quantity': '', 'note': ''},
+    {'time_from': '11:30', 'time_to': '12:00', 'line': '', 'product': 'Oběd', 'quantity': '', 'note': ''},
+    {'time_from': '12:00', 'time_to': '14:30', 'line': '', 'product': '', 'quantity': '', 'note': ''},
+]
+
+# Výchozí šablona – Koření
+DEFAULT_KORENI = [
+    {'time_from': '06:00', 'time_to': '08:00', 'line': '', 'product': '', 'quantity': '', 'note': ''},
+    {'time_from': '08:00', 'time_to': '08:20', 'line': '', 'product': 'Porada / přestávka', 'quantity': '', 'note': ''},
+    {'time_from': '08:20', 'time_to': '11:30', 'line': '', 'product': '', 'quantity': '', 'note': ''},
+    {'time_from': '11:30', 'time_to': '12:00', 'line': '', 'product': 'Oběd', 'quantity': '', 'note': ''},
+    {'time_from': '12:00', 'time_to': '14:30', 'line': '', 'product': '', 'quantity': '', 'note': ''},
 ]
 
 
@@ -68,6 +76,8 @@ def get_default_entries(section):
         return [dict(e) for e in DEFAULT_LAHVOVANI]
     elif section == 'priprava':
         return [dict(e) for e in DEFAULT_PRIPRAVA]
+    elif section == 'koreni':
+        return [dict(e) for e in DEFAULT_KORENI]
     return []
 
 
