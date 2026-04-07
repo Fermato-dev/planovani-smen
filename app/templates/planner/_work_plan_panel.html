@@ -64,10 +64,10 @@
         <table class="table table-sm table-bordered mb-1 wp-table" id="lahTable">
             <thead class="table-light" style="font-size:0.7rem;">
                 <tr>
-                    <th style="width:72px">Od</th>
-                    <th style="width:72px">Do</th>
-                    <th style="width:78px">Linka</th>
-                    <th style="width:160px">Produkt / popis</th>
+                    <th style="width:66px">Od</th>
+                    <th style="width:66px">Do</th>
+                    <th style="width:100px">Linka</th>
+                    <th style="width:150px">Produkt / popis</th>
                     <th style="width:90px">Množství</th>
                     <th>Poznámka / detail</th>
                     <th style="width:26px"></th>
@@ -78,13 +78,7 @@
                 <tr class="wp-row">
                     <td class="p-1"><input type="text" name="lah_time_from[]" class="form-control form-control-sm wp-time" value="{{ e.time_from }}" placeholder="06:00"></td>
                     <td class="p-1"><input type="text" name="lah_time_to[]"   class="form-control form-control-sm wp-time" value="{{ e.time_to }}"   placeholder="08:00"></td>
-                    <td class="p-1">
-                        <select name="lah_line[]" class="form-select form-select-sm">
-                            <option value="" {% if not e.line %}selected{% endif %}>—</option>
-                            <option value="LAH 1" {% if e.line == 'LAH 1' %}selected{% endif %}>LAH 1</option>
-                            <option value="LAH 2" {% if e.line == 'LAH 2' %}selected{% endif %}>LAH 2</option>
-                        </select>
-                    </td>
+                    <td class="p-1"><input type="text" name="lah_line[]" class="form-control form-control-sm" value="{{ e.line }}" list="lahLineOptions" placeholder="LAH 1"></td>
                     <td class="p-1"><input type="text" name="lah_product[]"  class="form-control form-control-sm" value="{{ e.product }}"  placeholder="produkt"></td>
                     <td class="p-1"><input type="text" name="lah_quantity[]" class="form-control form-control-sm" value="{{ e.quantity }}" placeholder="ks / kotle"></td>
                     <td class="p-1"><input type="text" name="lah_note[]"     class="form-control form-control-sm" value="{{ e.note }}"     placeholder="detail, poznámka…"></td>
@@ -103,10 +97,10 @@
         <table class="table table-sm table-bordered mb-1 wp-table" id="prepTable">
             <thead class="table-light" style="font-size:0.7rem;">
                 <tr>
-                    <th style="width:72px">Od</th>
-                    <th style="width:72px">Do</th>
-                    <th style="width:78px">Sekce</th>
-                    <th style="width:160px">Produkt / popis</th>
+                    <th style="width:66px">Od</th>
+                    <th style="width:66px">Do</th>
+                    <th style="width:100px">Sekce / místo</th>
+                    <th style="width:150px">Produkt / popis</th>
                     <th style="width:90px">Kotle / množství</th>
                     <th>Poznámka / detail</th>
                     <th style="width:26px"></th>
@@ -117,12 +111,7 @@
                 <tr class="wp-row">
                     <td class="p-1"><input type="text" name="prep_time_from[]" class="form-control form-control-sm wp-time" value="{{ e.time_from }}" placeholder="06:00"></td>
                     <td class="p-1"><input type="text" name="prep_time_to[]"   class="form-control form-control-sm wp-time" value="{{ e.time_to }}"   placeholder="08:00"></td>
-                    <td class="p-1">
-                        <select name="prep_line[]" class="form-select form-select-sm">
-                            <option value="" {% if not e.line %}selected{% endif %}>—</option>
-                            <option value="Koření" {% if e.line == 'Koření' %}selected{% endif %}>Koření</option>
-                        </select>
-                    </td>
+                    <td class="p-1"><input type="text" name="prep_line[]" class="form-control form-control-sm" value="{{ e.line }}" list="prepLineOptions" placeholder="místo / sekce"></td>
                     <td class="p-1"><input type="text" name="prep_product[]"  class="form-control form-control-sm" value="{{ e.product }}"  placeholder="produkt"></td>
                     <td class="p-1"><input type="text" name="prep_quantity[]" class="form-control form-control-sm" value="{{ e.quantity }}" placeholder="kotle / ks"></td>
                     <td class="p-1"><input type="text" name="prep_note[]"     class="form-control form-control-sm" value="{{ e.note }}"     placeholder="detail, poznámka…"></td>
@@ -141,9 +130,10 @@
         <table class="table table-sm table-bordered mb-1 wp-table" id="korTable">
             <thead class="table-light" style="font-size:0.7rem;">
                 <tr>
-                    <th style="width:72px">Od</th>
-                    <th style="width:72px">Do</th>
-                    <th style="width:160px">Produkt / koření</th>
+                    <th style="width:66px">Od</th>
+                    <th style="width:66px">Do</th>
+                    <th style="width:100px">Sekce / místo</th>
+                    <th style="width:150px">Produkt / koření</th>
                     <th style="width:90px">Množství</th>
                     <th>Poznámka / detail</th>
                     <th style="width:26px"></th>
@@ -154,7 +144,7 @@
                 <tr class="wp-row">
                     <td class="p-1"><input type="text" name="kor_time_from[]" class="form-control form-control-sm wp-time" value="{{ e.time_from }}" placeholder="06:00"></td>
                     <td class="p-1"><input type="text" name="kor_time_to[]"   class="form-control form-control-sm wp-time" value="{{ e.time_to }}"   placeholder="08:00"></td>
-                    <input type="hidden" name="kor_line[]" value="{{ e.line }}">
+                    <td class="p-1"><input type="text" name="kor_line[]" class="form-control form-control-sm" value="{{ e.line }}" list="korLineOptions" placeholder="místo / sekce"></td>
                     <td class="p-1"><input type="text" name="kor_product[]"  class="form-control form-control-sm" value="{{ e.product }}"  placeholder="druh koření"></td>
                     <td class="p-1"><input type="text" name="kor_quantity[]" class="form-control form-control-sm" value="{{ e.quantity }}" placeholder="kg / ks"></td>
                     <td class="p-1"><input type="text" name="kor_note[]"     class="form-control form-control-sm" value="{{ e.note }}"     placeholder="detail, poznámka…"></td>
@@ -194,11 +184,27 @@
 </form>
 
 {# Skryté template řádky #}
+<datalist id="lahLineOptions">
+    <option value="LAH 1">
+    <option value="LAH 2">
+    <option value="LAH 3">
+</datalist>
+<datalist id="prepLineOptions">
+    <option value="Příprava">
+    <option value="Kotelna">
+    <option value="Balírna">
+</datalist>
+<datalist id="korLineOptions">
+    <option value="Koření">
+    <option value="Sypárna">
+    <option value="Balírna">
+</datalist>
+
 <template id="lahRowTmpl">
     <tr class="wp-row">
         <td class="p-1"><input type="text" name="lah_time_from[]" class="form-control form-control-sm wp-time" placeholder="06:00"></td>
         <td class="p-1"><input type="text" name="lah_time_to[]"   class="form-control form-control-sm wp-time" placeholder="08:00"></td>
-        <td class="p-1"><select name="lah_line[]" class="form-select form-select-sm"><option value="">—</option><option value="LAH 1">LAH 1</option><option value="LAH 2">LAH 2</option></select></td>
+        <td class="p-1"><input type="text" name="lah_line[]" class="form-control form-control-sm" list="lahLineOptions" placeholder="LAH 1"></td>
         <td class="p-1"><input type="text" name="lah_product[]"  class="form-control form-control-sm" placeholder="produkt"></td>
         <td class="p-1"><input type="text" name="lah_quantity[]" class="form-control form-control-sm" placeholder="ks / kotle"></td>
         <td class="p-1"><input type="text" name="lah_note[]"     class="form-control form-control-sm" placeholder="detail, poznámka…"></td>
@@ -209,7 +215,7 @@
     <tr class="wp-row">
         <td class="p-1"><input type="text" name="prep_time_from[]" class="form-control form-control-sm wp-time" placeholder="06:00"></td>
         <td class="p-1"><input type="text" name="prep_time_to[]"   class="form-control form-control-sm wp-time" placeholder="08:00"></td>
-        <td class="p-1"><select name="prep_line[]" class="form-select form-select-sm"><option value="">—</option></select></td>
+        <td class="p-1"><input type="text" name="prep_line[]" class="form-control form-control-sm" list="prepLineOptions" placeholder="místo / sekce"></td>
         <td class="p-1"><input type="text" name="prep_product[]"  class="form-control form-control-sm" placeholder="produkt"></td>
         <td class="p-1"><input type="text" name="prep_quantity[]" class="form-control form-control-sm" placeholder="kotle / ks"></td>
         <td class="p-1"><input type="text" name="prep_note[]"     class="form-control form-control-sm" placeholder="detail, poznámka…"></td>
@@ -220,7 +226,7 @@
     <tr class="wp-row">
         <td class="p-1"><input type="text" name="kor_time_from[]" class="form-control form-control-sm wp-time" placeholder="06:00"></td>
         <td class="p-1"><input type="text" name="kor_time_to[]"   class="form-control form-control-sm wp-time" placeholder="08:00"></td>
-        <input type="hidden" name="kor_line[]" value="">
+        <td class="p-1"><input type="text" name="kor_line[]" class="form-control form-control-sm" list="korLineOptions" placeholder="místo / sekce"></td>
         <td class="p-1"><input type="text" name="kor_product[]"  class="form-control form-control-sm" placeholder="druh koření"></td>
         <td class="p-1"><input type="text" name="kor_quantity[]" class="form-control form-control-sm" placeholder="kg / ks"></td>
         <td class="p-1"><input type="text" name="kor_note[]"     class="form-control form-control-sm" placeholder="detail, poznámka…"></td>

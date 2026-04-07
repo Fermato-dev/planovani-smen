@@ -48,6 +48,15 @@ def _migrate_db(db):
             db.execute("ALTER TABLE departments ADD COLUMN work_plan INTEGER DEFAULT 1")
             db.commit()
 
+    # Jednorázová migrace: nastavit work_plan=0 pro expedici/sklad (pokud ještě neproběhla)
+    wp_init = db.execute("SELECT value FROM app_settings WHERE key = 'wp_defaults_applied'").fetchone()
+    if not wp_init:
+        db.execute(
+            "UPDATE departments SET work_plan = 0 WHERE name IN ('EXP', 'SKL', 'SKLAD', 'Sklad', 'Expedice', 'Sklady')"
+        )
+        db.execute("INSERT OR REPLACE INTO app_settings (key, value) VALUES ('wp_defaults_applied', '1')")
+        db.commit()
+
     # Add email tracking to weekly_plans (two-phase: first send + update send)
     if 'weekly_plans' in tables:
         plan_cols = [r[1] for r in db.execute("PRAGMA table_info(weekly_plans)").fetchall()]
