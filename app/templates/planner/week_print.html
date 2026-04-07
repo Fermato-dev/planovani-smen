@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plán směn – týden {{ plan.week_number }}/{{ plan.year }}</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 13px;
+    color: #1F2937;
+    background: #fff;
+    padding: 16px;
+}
+
+h1 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+.subtitle {
+    font-size: 12px;
+    color: #6B7280;
+    margin-bottom: 16px;
+}
+
+/* Print button – hidden when printing */
+.print-btn {
+    display: inline-block;
+    margin-bottom: 16px;
+    padding: 8px 20px;
+    background: #2563EB;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+    font-weight: 600;
+}
+.print-btn:hover { background: #1D4ED8; }
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+th, td {
+    border: 1px solid #D1D5DB;
+    padding: 6px 5px;
+    vertical-align: top;
+}
+
+/* Column widths */
+th:first-child, td:first-child {
+    width: 140px;
+    font-weight: 600;
+}
+
+/* Header row */
+thead th {
+    background: #2563EB;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    text-align: center;
+    vertical-align: middle;
+    padding: 8px 4px;
+}
+thead th:first-child {
+    background: #1E3A8A;
+}
+thead th.weekend {
+    background: #1D4ED8;
+}
+
+/* Employee name */
+.emp-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: #111827;
+}
+
+/* Weekend columns */
+td.weekend, th.weekend {
+    background: #F5F3FF;
+}
+
+/* Cell content */
+.cell-dept {
+    display: inline-block;
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #1F2937;
+    margin-bottom: 2px;
+}
+.cell-task {
+    display: block;
+    font-size: 11px;
+    color: #374151;
+}
+.cell-shift {
+    display: block;
+    font-size: 10px;
+    color: #6B7280;
+}
+.cell-note {
+    display: block;
+    font-size: 10px;
+    color: #9CA3AF;
+    font-style: italic;
+}
+
+/* Absence badges */
+.absence {
+    display: inline-block;
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 11px;
+    font-weight: 700;
+}
+.abs-dovolena  { background: #FEF3C7; color: #92400E; }
+.abs-nemoc     { background: #FECACA; color: #991B1B; }
+.abs-lekar     { background: #E0E7FF; color: #3730A3; }
+.abs-osobni    { background: #D1FAE5; color: #065F46; }
+.abs-nahradni  { background: #F3E8FF; color: #6B21A8; }
+.abs-jine      { background: #E5E7EB; color: #374151; }
+
+/* Summary row */
+tr.summary-row td {
+    background: #F3F4F6;
+    font-size: 11px;
+}
+tr.summary-row td:first-child {
+    font-weight: 700;
+    font-size: 12px;
+    color: #111827;
+    vertical-align: middle;
+}
+.summary-dept {
+    margin-bottom: 3px;
+}
+.dept-badge {
+    display: inline-block;
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #1F2937;
+}
+.summary-count {
+    font-weight: 700;
+    color: #111827;
+}
+.summary-remaining {
+    color: #D97706;
+    font-weight: 700;
+}
+.task-line {
+    font-size: 10px;
+    color: #6B7280;
+    padding-left: 8px;
+}
+.staff-ok   { color: #16A34A; font-weight: 700; }
+.staff-bad  { color: #DC2626; font-weight: 700; }
+
+/* Shift legend */
+.legend {
+    margin-top: 14px;
+    font-size: 11px;
+    color: #6B7280;
+    border-top: 1px solid #E5E7EB;
+    padding-top: 8px;
+}
+
+/* Alternating row shading */
+tbody tr:nth-child(even) td:not(.weekend) {
+    background: #FAFAFA;
+}
+
+@media print {
+    .print-btn { display: none !important; }
+    body { padding: 0; font-size: 11px; }
+    h1 { font-size: 15px; }
+    @page { size: A3 landscape; margin: 10mm; }
+}
+</style>
+</head>
+<body>
+
+<button class="print-btn" onclick="window.print()">🖨 Tisk / Uložit jako PDF</button>
+
+<h1>Plán směn – týden {{ plan.week_number }}/{{ plan.year }}</h1>
+<div class="subtitle">{{ dates[0].strftime('%d.%m.') }} – {{ dates[6].strftime('%d.%m.%Y') }}</div>
+
+{% set absence_labels = {'dovolena': 'Dovolená', 'nemoc': 'Nemoc', 'lekar': 'Lékař', 'osobni': 'Osobní', 'nahradni': 'Náhr. volno', 'jine': 'Jiné'} %}
+{% set day_names = ['Po', 'Út', 'St', 'Čt', 'Pá', 'So', 'Ne'] %}
+
+<table>
+<thead>
+    <tr>
+        <th>Zaměstnanec</th>
+        {% for d in dates %}
+        <th class="{{ 'weekend' if d.weekday() >= 5 }}">
+            {{ day_names[loop.index0] }}<br>{{ d.strftime('%d.%m.') }}
+        </th>
+        {% endfor %}
+    </tr>
+</thead>
+<tbody>
+    {% for row in grid %}
+    <tr>
+        <td class="emp-name">{{ row.employee.name }}</td>
+        {% for day in row.days %}
+        {% set a = day.assignment if day else none %}
+        <td class="{{ 'weekend' if day.is_weekend }}">
+            {% if a and (a.is_absence or a.dept_name or a.task_name or a.shift_name or a.note) %}
+                {% if a.is_absence %}
+                    <span class="absence abs-{{ a.absence_type }}">{{ absence_labels.get(a.absence_type, a.absence_type) }}</span>
+                    {% if a.note %}<span class="cell-note">{{ a.note }}</span>{% endif %}
+                    {% if a.dept_name or a.task_name %}
+                        <span class="cell-task" style="color:#6B7280">{{ a.dept_name }}{% if a.task_name %} · {{ a.task_name }}{% endif %}</span>
+                    {% endif %}
+                {% else %}
+                    {% if a.dept_name %}
+                        <span class="cell-dept" style="background-color:#{{ a.dept_color or 'D9D9D9' }}">{{ a.dept_name }}</span>
+                    {% endif %}
+                    {% if a.task_name %}<span class="cell-task">{{ a.task_name }}</span>{% endif %}
+                    {% if a.shift_name %}<span class="cell-shift">{{ a.shift_name }}</span>{% endif %}
+                    {% if a.note %}<span class="cell-note">{{ a.note }}</span>{% endif %}
+                {% endif %}
+            {% endif %}
+        </td>
+        {% endfor %}
+    </tr>
+    {% endfor %}
+</tbody>
+<tfoot>
+    <tr class="summary-row">
+        <td>Obsazení</td>
+        {% for d in dates %}
+        {% set ds = d.isoformat() %}
+        {% set day_reqs = req_map.get(ds, {}) %}
+        <td class="{{ 'weekend' if d.weekday() >= 5 }}">
+            {% for s in summary.get(ds, []) %}
+            {% set ns = namespace(task_total=0) %}
+            {% for t in task_summary.get(ds, []) if t.department_id == s.id %}
+                {% set ns.task_total = ns.task_total + t.staff_count %}
+            {% endfor %}
+            {% set remaining = s.staff_count - ns.task_total %}
+            <div class="summary-dept">
+                <span class="dept-badge" style="background-color:#{{ s.color }}">{{ s.name }}</span>
+                <span class="summary-count">{{ s.staff_count }}</span>
+                {% if remaining > 0 %}
+                <span class="summary-remaining">/ zbývá {{ remaining }}</span>
+                {% endif %}
+            </div>
+            {% for t in task_summary.get(ds, []) if t.department_id == s.id %}
+            {% set req = day_reqs.get(t.id) %}
+            <div class="task-line">
+                ↳ {{ t.name }}
+                {% if req %}
+                    {% set mn = req.min_count %}
+                    {% set mx = req.max_count %}
+                    <span class="{{ 'staff-ok' if t.staff_count >= mn else 'staff-bad' }}">
+                        {{ t.staff_count }}/{{ mn }}{% if mx and mx > 0 %}–{{ mx }}{% endif %}
+                    </span>
+                {% else %}
+                    {{ t.staff_count }}
+                {% endif %}
+            </div>
+            {% endfor %}
+            {% endfor %}
+            {% if not summary.get(ds) %}–{% endif %}
+        </td>
+        {% endfor %}
+    </tr>
+</tfoot>
+</table>
+
+{% if shifts %}
+<div class="legend">
+    Směny: {% for s in shifts %}{{ s.name }} = {{ s.start_time[:5] }}–{{ s.end_time[:5] }}{% if not loop.last %} &nbsp;|&nbsp; {% endif %}{% endfor %}
+</div>
+{% endif %}
+
+</body>
+</html>

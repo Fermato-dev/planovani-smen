@@ -112,6 +112,10 @@
            class="btn btn-outline-secondary btn-sm" title="Stáhnout Excel">
             <i class="bi bi-file-earmark-spreadsheet"></i> Excel
         </a>
+        <a href="{{ url_for('export.print_week', week_start=week_start) }}" target="_blank"
+           class="btn btn-outline-secondary btn-sm" title="Tisk / Uložit jako PDF">
+            <i class="bi bi-printer"></i> Tisk
+        </a>
         <span class="badge status-{{ plan.status }}">
             {{ 'Koncept' if plan.status == 'draft' else 'Publikováno' }}
         </span>

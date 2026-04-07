@@ -6,9 +6,18 @@
     {% set day_reqs = req_map.get(ds, {}) %}
     <td class="summary-cell {{ 'col-weekend' if d.weekday() >= 5 }}">
         {% for s in summary.get(ds, []) %}
+        {# Spočítám kolik lidí má přiřazenou práci v tomto oddělení #}
+        {% set ns = namespace(task_total=0) %}
+        {% for t in task_summary.get(ds, []) if t.department_id == s.id %}
+            {% set ns.task_total = ns.task_total + t.staff_count %}
+        {% endfor %}
+        {% set remaining = s.staff_count - ns.task_total %}
         <div>
             <span class="dept-badge-sm" style="background-color: #{{ s.color }}">{{ s.name }}</span>
             <span class="staff-count">{{ s.staff_count }}</span>
+            {% if remaining > 0 %}
+            <span class="text-warning fw-bold" style="font-size:0.72rem;" title="Bez přiřazené práce">/ zbývá {{ remaining }}</span>
+            {% endif %}
         </div>
         {# Práce patřící tomuto oddělení #}
         {% for t in task_summary.get(ds, []) if t.department_id == s.id %}
