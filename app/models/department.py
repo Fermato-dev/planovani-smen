@@ -29,7 +29,7 @@ def update_department(dept_id, **kwargs):
     fields = []
     values = []
     for key, val in kwargs.items():
-        if key in ('name', 'full_name', 'color', 'min_staff', 'max_staff', 'sort_order', 'active'):
+        if key in ('name', 'full_name', 'color', 'min_staff', 'max_staff', 'sort_order', 'active', 'work_plan'):
             fields.append(f"{key} = ?")
             values.append(val)
     if fields:

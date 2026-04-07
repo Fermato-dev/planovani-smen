@@ -41,6 +41,13 @@ def _migrate_db(db):
             db.execute("ALTER TABLE employees ADD COLUMN email TEXT DEFAULT ''")
             db.commit()
 
+    # Přidat příznak work_plan k oddělením (filtr pro plán práce)
+    if 'departments' in tables:
+        dept_cols = [r[1] for r in db.execute("PRAGMA table_info(departments)").fetchall()]
+        if 'work_plan' not in dept_cols:
+            db.execute("ALTER TABLE departments ADD COLUMN work_plan INTEGER DEFAULT 1")
+            db.commit()
+
     # Add email tracking to weekly_plans (two-phase: first send + update send)
     if 'weekly_plans' in tables:
         plan_cols = [r[1] for r in db.execute("PRAGMA table_info(weekly_plans)").fetchall()]

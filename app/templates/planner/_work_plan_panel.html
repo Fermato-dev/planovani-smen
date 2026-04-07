@@ -23,7 +23,7 @@
     <div>
         <span class="dept-badge-sm me-1" style="background-color:#{{ dept_data.color }}">{{ dept_name }}</span>
         <span style="font-size:0.78rem;color:#374151">
-            {% for emp in dept_data.employees %}{{ emp.name }}{% if emp.task %} <em style="color:#9CA3AF">({{ emp.task }})</em>{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}
+            {% for emp_name in dept_data.employees %}{{ emp_name }}{% if not loop.last %}, {% endif %}{% endfor %}
         </span>
     </div>
     {% endfor %}

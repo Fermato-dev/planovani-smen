@@ -110,30 +110,33 @@ def copy_from_previous_day(plan_id, date, section):
 
 
 def get_employees_for_day(plan_id, date):
-    """Vrátí zaměstnance přiřazené na daný den, seskupené podle oddělení."""
+    """Vrátí zaměstnance přiřazené na daný den, seskupené podle práce.
+    Zahrnuje pouze oddělení s work_plan = 1."""
     db = get_db()
     rows = db.execute(
-        """SELECT e.name, d.name as dept_name, d.color as dept_color, t.name as task_name
+        """SELECT e.name,
+                  COALESCE(t.name, d.name) as group_label,
+                  d.color as dept_color,
+                  t.name as task_name,
+                  d.sort_order as dept_order
            FROM assignments a
            JOIN employees e ON a.employee_id = e.id
            LEFT JOIN departments d ON a.department_id = d.id
            LEFT JOIN tasks t ON a.task_id = t.id
-           WHERE a.plan_id = ? AND a.date = ? AND a.is_absence = 0 AND a.department_id IS NOT NULL
-           ORDER BY d.sort_order, e.name""",
+           WHERE a.plan_id = ? AND a.date = ? AND a.is_absence = 0
+             AND a.department_id IS NOT NULL
+             AND COALESCE(d.work_plan, 1) = 1
+           ORDER BY d.sort_order, COALESCE(t.name, d.name), e.name""",
         (plan_id, date)
     ).fetchall()
-    # Seskupit podle oddělení
     from collections import OrderedDict
     result = OrderedDict()
     for r in rows:
-        dept = r['dept_name'] or '—'
+        label = r['group_label'] or '—'
         color = r['dept_color'] or 'D9D9D9'
-        if dept not in result:
-            result[dept] = {'color': color, 'employees': []}
-        result[dept]['employees'].append({
-            'name': r['name'],
-            'task': r['task_name'] or '',
-        })
+        if label not in result:
+            result[label] = {'color': color, 'employees': []}
+        result[label]['employees'].append(r['name'])
     return result
 
 

@@ -59,7 +59,8 @@ def department_edit(dept_id):
                       full_name=request.form.get('full_name', '').strip(),
                       color=request.form.get('color', 'D9D9D9').strip().lstrip('#'),
                       min_staff=int(request.form.get('min_staff', 0)),
-                      max_staff=int(request.form.get('max_staff', 99)))
+                      max_staff=int(request.form.get('max_staff', 99)),
+                      work_plan=1 if request.form.get('work_plan') else 0)
     flash('Oddělení aktualizováno.', 'success')
     return redirect(url_for('settings.index'))
 
