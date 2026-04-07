@@ -1,0 +1,165 @@
+{# Panel "Plán práce" – načítá se do modalu přes HTMX #}
+{% set day_names_cz = ['Pondělí','Úterý','Středa','Čtvrtek','Pátek','Sobota','Neděle'] %}
+
+<div class="modal-header py-2">
+    <h5 class="modal-title">
+        <i class="bi bi-card-list me-2"></i>Plán práce – {{ section_label }}
+        <span class="text-muted fw-normal ms-1">{{ day_date }}</span>
+    </h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+</div>
+
+{% if copied_from %}
+<div class="alert alert-info alert-sm mb-0 px-3 py-2 rounded-0" style="font-size:0.8rem">
+    <i class="bi bi-info-circle me-1"></i>Zkopírováno z {{ copied_from }} – zkontroluj a uprav, pak uložit.
+</div>
+{% endif %}
+
+<form id="workPlanForm"
+      hx-post="{{ url_for('work_plan.save', plan_id=plan_id, day_date=day_date, section=section) }}"
+      hx-on::after-request="bootstrap.Modal.getInstance(document.getElementById('workPlanModal')).hide()">
+
+<div class="modal-body p-2">
+
+    {# Tabulka řádků #}
+    <table class="table table-sm table-bordered mb-1" id="wpTable">
+        <thead class="table-light" style="font-size:0.72rem;">
+            <tr>
+                <th style="width:90px">Od</th>
+                <th style="width:90px">Do</th>
+                {% if section == 'lahvovani' %}
+                <th style="width:80px">Linka</th>
+                {% else %}
+                <th style="width:80px">Sekce</th>
+                {% endif %}
+                <th>Produkt / popis</th>
+                <th style="width:110px">Množství / kotle</th>
+                <th style="width:110px">Poznámka</th>
+                <th style="width:28px"></th>
+            </tr>
+        </thead>
+        <tbody id="wpRows">
+            {% for e in entries %}
+            <tr class="wp-row">
+                <td class="p-1">
+                    <input type="text" name="time_from[]" class="form-control form-control-sm wp-time"
+                           value="{{ e.time_from }}" placeholder="06:00">
+                </td>
+                <td class="p-1">
+                    <input type="text" name="time_to[]" class="form-control form-control-sm wp-time"
+                           value="{{ e.time_to }}" placeholder="08:00">
+                </td>
+                <td class="p-1">
+                    {% if section == 'lahvovani' %}
+                    <select name="line[]" class="form-select form-select-sm">
+                        <option value="" {% if not e.line %}selected{% endif %}>—</option>
+                        <option value="LAH 1" {% if e.line == 'LAH 1' %}selected{% endif %}>LAH 1</option>
+                        <option value="LAH 2" {% if e.line == 'LAH 2' %}selected{% endif %}>LAH 2</option>
+                    </select>
+                    {% else %}
+                    <select name="line[]" class="form-select form-select-sm">
+                        <option value="" {% if not e.line %}selected{% endif %}>—</option>
+                        <option value="Koření" {% if e.line == 'Koření' %}selected{% endif %}>Koření</option>
+                    </select>
+                    {% endif %}
+                </td>
+                <td class="p-1">
+                    <input type="text" name="product[]" class="form-control form-control-sm"
+                           value="{{ e.product }}" placeholder="produkt">
+                </td>
+                <td class="p-1">
+                    <input type="text" name="quantity[]" class="form-control form-control-sm"
+                           value="{{ e.quantity }}" placeholder="ks / kotle">
+                </td>
+                <td class="p-1">
+                    <input type="text" name="note[]" class="form-control form-control-sm"
+                           value="{{ e.note }}" placeholder="poznámka">
+                </td>
+                <td class="p-1 text-center align-middle">
+                    <button type="button" class="btn btn-sm btn-outline-danger wp-del-row"
+                            style="padding:1px 6px;font-size:0.7rem" title="Smazat řádek">×</button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <button type="button" class="btn btn-sm btn-outline-secondary" id="wpAddRow">
+        <i class="bi bi-plus"></i> Přidat řádek
+    </button>
+
+</div>
+
+<div class="modal-footer justify-content-between py-2">
+    <div class="d-flex gap-2">
+        <button type="button" class="btn btn-sm btn-outline-secondary"
+                hx-post="{{ url_for('work_plan.copy_prev', plan_id=plan_id, day_date=day_date, section=section) }}"
+                hx-target="#workPlanModal .modal-body-inner"
+                hx-swap="innerHTML"
+                title="Přeplní formulář daty z předchozího dne (neuloží)">
+            <i class="bi bi-clipboard-arrow-up me-1"></i>Kopírovat z předchozího dne
+        </button>
+        <a href="{{ url_for('work_plan.print_day', plan_id=plan_id, day_date=day_date) }}"
+           target="_blank" class="btn btn-sm btn-outline-secondary" title="Tisk plánu práce pro tento den">
+            <i class="bi bi-printer me-1"></i>Tisk
+        </a>
+    </div>
+    <div>
+        <button type="button" class="btn btn-sm btn-secondary me-1" data-bs-dismiss="modal">Zrušit</button>
+        <button type="submit" class="btn btn-sm btn-primary">
+            <i class="bi bi-floppy me-1"></i>Uložit
+        </button>
+    </div>
+</div>
+</form>
+
+{# Skrytý template řádek pro přidávání nových řádků #}
+<template id="wpRowTemplate">
+    <tr class="wp-row">
+        <td class="p-1"><input type="text" name="time_from[]" class="form-control form-control-sm wp-time" placeholder="06:00"></td>
+        <td class="p-1"><input type="text" name="time_to[]" class="form-control form-control-sm wp-time" placeholder="08:00"></td>
+        <td class="p-1">
+            {% if section == 'lahvovani' %}
+            <select name="line[]" class="form-select form-select-sm">
+                <option value="">—</option>
+                <option value="LAH 1">LAH 1</option>
+                <option value="LAH 2">LAH 2</option>
+            </select>
+            {% else %}
+            <select name="line[]" class="form-select form-select-sm">
+                <option value="">—</option>
+                <option value="Koření">Koření</option>
+            </select>
+            {% endif %}
+        </td>
+        <td class="p-1"><input type="text" name="product[]" class="form-control form-control-sm" placeholder="produkt"></td>
+        <td class="p-1"><input type="text" name="quantity[]" class="form-control form-control-sm" placeholder="ks / kotle"></td>
+        <td class="p-1"><input type="text" name="note[]" class="form-control form-control-sm" placeholder="poznámka"></td>
+        <td class="p-1 text-center align-middle">
+            <button type="button" class="btn btn-sm btn-outline-danger wp-del-row"
+                    style="padding:1px 6px;font-size:0.7rem" title="Smazat řádek">×</button>
+        </td>
+    </tr>
+</template>
+
+<script>
+(function() {
+    // Přidat řádek
+    document.getElementById('wpAddRow').addEventListener('click', function() {
+        const tmpl = document.getElementById('wpRowTemplate');
+        const clone = tmpl.content.cloneNode(true);
+        document.getElementById('wpRows').appendChild(clone);
+        attachDeleteHandlers();
+    });
+
+    // Mazání řádků
+    function attachDeleteHandlers() {
+        document.querySelectorAll('.wp-del-row').forEach(function(btn) {
+            btn.onclick = function() {
+                btn.closest('tr').remove();
+            };
+        });
+    }
+    attachDeleteHandlers();
+})();
+</script>

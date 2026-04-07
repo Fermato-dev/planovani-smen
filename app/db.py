@@ -97,6 +97,24 @@ def _migrate_db(db):
     """)
     db.commit()
 
+    # Plán práce (denní výrobní plán – lahvování a příprava)
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS work_plan_entries (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            plan_id INTEGER NOT NULL REFERENCES weekly_plans(id) ON DELETE CASCADE,
+            date DATE NOT NULL,
+            section TEXT NOT NULL DEFAULT '',
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            time_from TEXT NOT NULL DEFAULT '',
+            time_to TEXT NOT NULL DEFAULT '',
+            line TEXT NOT NULL DEFAULT '',
+            product TEXT NOT NULL DEFAULT '',
+            quantity TEXT NOT NULL DEFAULT '',
+            note TEXT NOT NULL DEFAULT ''
+        )
+    """)
+    db.commit()
+
     # Denní potřeby obsazení (nová tabulka pro plánování)
     db.execute("""
         CREATE TABLE IF NOT EXISTS day_requirements (

@@ -316,6 +316,17 @@
                                     data-bs-target="#reqModal">
                                 <i class="bi bi-clipboard-check"></i>
                             </button>
+                            {# Tlačítko "Plán práce" #}
+                            <button type="button"
+                                    class="btn btn-req-day {% if work_plan_map.get(dates[i].isoformat(), {}).get('lahvovani') or work_plan_map.get(dates[i].isoformat(), {}).get('priprava') %}btn-req-active{% endif %}"
+                                    title="Plán práce"
+                                    hx-get="{{ url_for('work_plan.panel', plan_id=plan.id, day_date=dates[i].isoformat(), section='lahvovani') }}"
+                                    hx-target="#workPlanModal .modal-body-inner"
+                                    hx-swap="innerHTML"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#workPlanModal">
+                                <i class="bi bi-card-list"></i>
+                            </button>
                             <form method="POST"
                                   action="{{ url_for('planner.clear_day_route', plan_id=plan.id, day_date=dates[i].isoformat()) }}"
                                   class="d-inline"
@@ -403,6 +414,20 @@
 <!-- Potřeby dne Modal -->
 <div class="modal fade" id="reqModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-body-inner">
+                {# Obsah se načítá dynamicky přes HTMX #}
+                <div class="modal-body text-center text-muted py-4">
+                    <i class="bi bi-hourglass-split"></i> Načítám…
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Plán práce Modal -->
+<div class="modal fade" id="workPlanModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <div class="modal-body-inner">
                 {# Obsah se načítá dynamicky přes HTMX #}

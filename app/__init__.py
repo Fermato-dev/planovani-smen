@@ -122,4 +122,7 @@ def create_app():
     from app.routes.planner import bp as planner_bp
     app.register_blueprint(planner_bp)
 
+    from app.routes.work_plan import bp as work_plan_bp
+    app.register_blueprint(work_plan_bp)
+
     return app

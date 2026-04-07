@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<title>Plán práce – {{ day_date }}</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; color: #1F2937; background: #fff; padding: 16px; }
+h1 { font-size: 17px; font-weight: 700; margin-bottom: 2px; }
+.subtitle { font-size: 11px; color: #6B7280; margin-bottom: 14px; }
+.print-btn { display: inline-block; margin-bottom: 14px; padding: 7px 18px; background: #2563EB; color: #fff; border: none; border-radius: 5px; font-size: 13px; cursor: pointer; font-weight: 600; }
+.print-btn:hover { background: #1D4ED8; }
+
+.section-title { font-size: 14px; font-weight: 700; background: #1E3A8A; color: #fff; padding: 5px 10px; margin-bottom: 0; margin-top: 18px; border-radius: 4px 4px 0 0; }
+.section-title:first-of-type { margin-top: 0; }
+
+table { width: 100%; border-collapse: collapse; margin-bottom: 18px; }
+th, td { border: 1px solid #D1D5DB; padding: 5px 7px; vertical-align: middle; }
+thead th { background: #2563EB; color: #fff; font-size: 11px; font-weight: 700; text-align: center; }
+thead th:first-child { background: #1D4ED8; }
+
+td.time-col { font-size: 12px; font-weight: 600; white-space: nowrap; text-align: center; color: #374151; background: #F9FAFB; }
+td.line-col { font-weight: 700; font-size: 12px; text-align: center; }
+td.line-lah1 { background: #DBEAFE; color: #1E40AF; }
+td.line-lah2 { background: #D1FAE5; color: #065F46; }
+td.line-koreni { background: #FEF3C7; color: #92400E; }
+td.product-col { font-size: 13px; }
+td.qty-col { font-size: 12px; text-align: center; color: #374151; }
+td.note-col { font-size: 11px; color: #6B7280; font-style: italic; }
+
+tr.pause-row td { background: #F3F4F6; color: #6B7280; font-style: italic; }
+
+@media print {
+    .print-btn { display: none !important; }
+    body { padding: 0; font-size: 11px; }
+    h1 { font-size: 14px; }
+    @page { size: A4 portrait; margin: 10mm; }
+    .section-title { margin-top: 14px; }
+}
+</style>
+</head>
+<body>
+
+<button class="print-btn" onclick="window.print()">🖨 Tisk / Uložit jako PDF</button>
+
+<h1>Plán práce – {{ day_date }}</h1>
+<div class="subtitle">Vytištěno: {{ now }}</div>
+
+{% for section, label, entries in sections %}
+{% if entries %}
+<div class="section-title">{{ label }}</div>
+<table>
+    <thead>
+        <tr>
+            <th style="width:120px">Čas</th>
+            <th style="width:70px">{% if section == 'lahvovani' %}Linka{% else %}Sekce{% endif %}</th>
+            <th>Produkt / popis</th>
+            <th style="width:120px">Množství / kotle</th>
+            <th style="width:120px">Poznámka</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for e in entries %}
+        {% set is_pause = not e.line and e.product in ['Porada / přestávka', 'Oběd', 'Porada', 'Přestávka', 'oběd'] %}
+        <tr class="{{ 'pause-row' if is_pause }}">
+            <td class="time-col">{{ e.time_from }}{% if e.time_to %} – {{ e.time_to }}{% endif %}</td>
+            <td class="line-col {{ 'line-lah1' if e.line == 'LAH 1' else 'line-lah2' if e.line == 'LAH 2' else 'line-koreni' if e.line == 'Koření' else '' }}">
+                {{ e.line or '—' }}
+            </td>
+            <td class="product-col">{{ e.product }}</td>
+            <td class="qty-col">{{ e.quantity }}</td>
+            <td class="note-col">{{ e.note }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+{% endfor %}
+
+</body>
+</html>

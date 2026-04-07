@@ -9,6 +9,7 @@ from app.models.day_requirement import (
     get_requirements_for_day, get_requirements_map,
     save_day_requirements, clear_day_requirements
 )
+from app.models.work_plan import has_entries_map
 from app.models.employee import get_employee
 from app.models.department import get_all_departments, get_tasks_for_department
 from app.models.shift import get_all_shifts
@@ -49,6 +50,7 @@ def week_view(week_start):
     grid, dates = build_plan_grid(plan_id, week_start)
     summary, task_summary = get_staffing_summary(plan_id, dates)
     req_map = get_requirements_map(plan_id, dates)
+    work_plan_map = has_entries_map(plan_id, dates)
     departments = get_all_departments()
     shifts = get_all_shifts()
 
@@ -109,6 +111,7 @@ def week_view(week_start):
                            plan=plan, grid=grid, dates=dates,
                            summary=summary, task_summary=task_summary,
                            req_map=req_map,
+                           work_plan_map=work_plan_map,
                            departments=departments,
                            shifts=shifts, day_names=DAY_NAMES,
                            day_names_full=DAY_NAMES_FULL,
