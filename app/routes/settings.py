@@ -1,6 +1,7 @@
 import os
+import shutil
 import logging
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_file, current_app
 
 logger = logging.getLogger(__name__)
 from app.models.department import (
@@ -232,3 +233,32 @@ def email_save():
             flash(f'Test selhal: {e}', 'error')
 
     return redirect(url_for('settings.index', tab='email'))
+
+
+@bp.route('/backup/download')
+def backup_download():
+    """Stáhne databázový soubor jako zálohu."""
+    db_path = current_app.config['DATABASE']
+    if not os.path.exists(db_path):
+        flash('Databáze nenalezena.', 'error')
+        return redirect(url_for('settings.index'))
+    return send_file(db_path, as_attachment=True,
+                     download_name='planovani_smen_backup.db',
+                     mimetype='application/octet-stream')
+
+
+@bp.route('/backup/restore', methods=['POST'])
+def backup_restore():
+    """Obnoví databázi z nahraného souboru."""
+    f = request.files.get('db_file')
+    if not f or not f.filename.endswith('.db'):
+        flash('Prosím nahraj soubor s příponou .db', 'error')
+        return redirect(url_for('settings.index', tab='backup'))
+    db_path = current_app.config['DATABASE']
+    os.makedirs(os.path.dirname(db_path), exist_ok=True)
+    # Záloha stávající DB
+    if os.path.exists(db_path):
+        shutil.copy2(db_path, db_path + '.before_restore')
+    f.save(db_path)
+    flash('Databáze obnovena. Restartuj aplikaci pro jistotu (nebo počkej pár sekund).', 'success')
+    return redirect(url_for('settings.index', tab='backup'))

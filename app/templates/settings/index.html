@@ -33,6 +33,11 @@
             <i class="bi bi-envelope"></i> Email
         </button>
     </li>
+    <li class="nav-item">
+        <button class="nav-link {{ 'active' if active_tab == 'backup' }}" data-bs-toggle="tab" data-bs-target="#tab-backup">
+            <i class="bi bi-database"></i> Záloha
+        </button>
+    </li>
 </ul>
 
 <div class="tab-content">
@@ -680,6 +685,40 @@
                 </div>
             </div>
         </form>
+    </div>
+
+    <!-- ZÁLOHA TAB -->
+    <div class="tab-pane fade {{ 'show active' if active_tab == 'backup' }}" id="tab-backup">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-download me-2"></i>Stáhnout zálohu databáze</span>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">Stáhne celou databázi jako soubor <code>.db</code>. Použij to pro přenos dat mezi instancemi aplikace.</p>
+                <a href="{{ url_for('settings.backup_download') }}" class="btn btn-primary">
+                    <i class="bi bi-download me-1"></i> Stáhnout databázi
+                </a>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header">
+                <span><i class="bi bi-upload me-2"></i>Obnovit databázi ze zálohy</span>
+            </div>
+            <div class="card-body">
+                <p class="text-muted text-danger"><i class="bi bi-exclamation-triangle me-1"></i>
+                    <strong>Pozor:</strong> Toto přepíše všechna stávající data! Stávající databáze bude zálohována automaticky.</p>
+                <form method="POST" action="{{ url_for('settings.backup_restore') }}" enctype="multipart/form-data"
+                      onsubmit="return confirm('Opravdu chceš přepsat celou databázi? Stávající data budou nahrazena.')">
+                    <div class="mb-3">
+                        <label class="form-label">Soubor zálohy (.db)</label>
+                        <input type="file" name="db_file" class="form-control" accept=".db" required>
+                    </div>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-upload me-1"></i> Obnovit databázi
+                    </button>
+                </form>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}
