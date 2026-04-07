@@ -97,6 +97,20 @@ def _migrate_db(db):
     """)
     db.commit()
 
+    # Denní potřeby obsazení (nová tabulka pro plánování)
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS day_requirements (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            plan_id INTEGER NOT NULL REFERENCES weekly_plans(id) ON DELETE CASCADE,
+            date DATE NOT NULL,
+            task_id INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+            min_count INTEGER NOT NULL DEFAULT 0,
+            max_count INTEGER DEFAULT NULL,
+            UNIQUE(plan_id, date, task_id)
+        )
+    """)
+    db.commit()
+
     # Auto-create default admin if no users exist
     user_count = db.execute("SELECT COUNT(*) FROM users").fetchone()[0]
     if user_count == 0:

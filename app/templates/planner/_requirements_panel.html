@@ -1,0 +1,85 @@
+{# Panel "Potřeby dne" - načítá se do modalu přes HTMX #}
+{% set day_names_cz = ['Pondělí','Úterý','Středa','Čtvrtek','Pátek','Sobota','Neděle'] %}
+{% set d = day_date | string %}
+{# Zjistíme název dne z data #}
+{% set day_label = day_date %}
+
+<div class="modal-header">
+    <h5 class="modal-title">
+        <i class="bi bi-clipboard-check me-2"></i>Potřeby dne
+        <span class="text-muted fw-normal ms-1">{{ day_date }}</span>
+    </h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+</div>
+
+<form hx-post="{{ url_for('planner.requirements_save', plan_id=plan_id, day_date=day_date) }}"
+      hx-on::after-request="bootstrap.Modal.getInstance(document.getElementById('reqModal')).hide()"
+      id="reqForm">
+<div class="modal-body">
+    <p class="text-muted small mb-3">
+        Zadej kolik lidí potřebuješ na každou práci. Nuly a prázdná pole se ignorují.
+    </p>
+
+    {% for dept in departments %}
+    {% if tasks_by_dept.get(dept.id) %}
+    <div class="mb-3">
+        <div class="dept-badge-sm mb-2" style="background-color: #{{ dept.color }}">
+            {{ dept.name }} – {{ dept.full_name or dept.name }}
+        </div>
+        <table class="table table-sm table-borderless mb-0">
+            <thead>
+                <tr class="text-muted" style="font-size:0.7rem">
+                    <th style="width:40%">Práce</th>
+                    <th style="width:28%">Min lidí</th>
+                    <th style="width:28%">Max lidí</th>
+                    <th style="width:4%"></th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for task in tasks_by_dept[dept.id] %}
+            {% set ex = existing.get(task.id) %}
+            <tr>
+                <td class="py-1 align-middle">
+                    <small>{{ task.name }}</small>
+                </td>
+                <td class="py-1">
+                    <input type="number"
+                           name="min_{{ task.id }}"
+                           class="form-control form-control-sm req-input"
+                           value="{{ ex.min_count if ex and ex.min_count else '' }}"
+                           min="0" max="99" placeholder="–">
+                </td>
+                <td class="py-1">
+                    <input type="number"
+                           name="max_{{ task.id }}"
+                           class="form-control form-control-sm req-input"
+                           value="{{ ex.max_count if ex and ex.max_count else '' }}"
+                           min="0" max="99" placeholder="–">
+                </td>
+                <td class="py-1 align-middle text-center">
+                    {% if ex %}
+                    <i class="bi bi-check-circle-fill text-success" style="font-size:0.8rem" title="Nastaveno"></i>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+    {% endfor %}
+</div>
+<div class="modal-footer justify-content-between">
+    <button type="submit" name="action" value="clear"
+            class="btn btn-sm btn-outline-danger"
+            onclick="return confirm('Vymazat všechny potřeby pro tento den?')">
+        <i class="bi bi-trash me-1"></i>Vymazat den
+    </button>
+    <div>
+        <button type="button" class="btn btn-sm btn-secondary me-1" data-bs-dismiss="modal">Zrušit</button>
+        <button type="submit" name="action" value="save" class="btn btn-sm btn-primary">
+            <i class="bi bi-floppy me-1"></i>Uložit
+        </button>
+    </div>
+</div>
+</form>

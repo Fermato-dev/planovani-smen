@@ -5,6 +5,10 @@ from app.models.plan import (
     get_plan, get_all_plans, update_plan_status, delete_plan,
     upsert_assignment, clear_assignment, clear_day, update_email_sent
 )
+from app.models.day_requirement import (
+    get_requirements_for_day, get_requirements_map,
+    save_day_requirements, clear_day_requirements
+)
 from app.models.employee import get_employee
 from app.models.department import get_all_departments, get_tasks_for_department
 from app.models.shift import get_all_shifts
@@ -44,6 +48,7 @@ def week_view(week_start):
     plan = get_plan(plan_id)
     grid, dates = build_plan_grid(plan_id, week_start)
     summary, task_summary = get_staffing_summary(plan_id, dates)
+    req_map = get_requirements_map(plan_id, dates)
     departments = get_all_departments()
     shifts = get_all_shifts()
 
@@ -103,6 +108,7 @@ def week_view(week_start):
     return render_template('planner/week.html',
                            plan=plan, grid=grid, dates=dates,
                            summary=summary, task_summary=task_summary,
+                           req_map=req_map,
                            departments=departments,
                            shifts=shifts, day_names=DAY_NAMES,
                            day_names_full=DAY_NAMES_FULL,
@@ -208,9 +214,60 @@ def summary_row(plan_id, week_start):
     """HTMX: return updated staffing summary row."""
     dates = get_week_dates(week_start)
     summary, task_summary = get_staffing_summary(plan_id, dates)
+    req_map = get_requirements_map(plan_id, dates)
     return render_template('planner/_summary_row.html',
                            dates=dates, summary=summary,
-                           task_summary=task_summary)
+                           task_summary=task_summary,
+                           req_map=req_map)
+
+
+@bp.route('/requirements/<int:plan_id>/<day_date>', methods=['GET'])
+def requirements_panel(plan_id, day_date):
+    """HTMX: panel pro nastavení denních potřeb obsazení."""
+    departments = get_all_departments()
+    from app.db import get_db
+    db = get_db()
+    # Načteme všechny aktivní práce seskupené pod oddělení
+    tasks_by_dept = {}
+    for dept in departments:
+        tasks = db.execute(
+            "SELECT id, name FROM tasks WHERE department_id = ? AND active = 1 ORDER BY name",
+            (dept['id'],)
+        ).fetchall()
+        if tasks:
+            tasks_by_dept[dept['id']] = tasks
+    # Stávající požadavky pro daný den
+    existing = {r['task_id']: r for r in get_requirements_for_day(plan_id, day_date)}
+    return render_template('planner/_requirements_panel.html',
+                           plan_id=plan_id, day_date=day_date,
+                           departments=departments,
+                           tasks_by_dept=tasks_by_dept,
+                           existing=existing)
+
+
+@bp.route('/requirements/<int:plan_id>/<day_date>', methods=['POST'])
+def requirements_save(plan_id, day_date):
+    """HTMX: uloží denní potřeby a vrátí aktualizovaný summary."""
+    action = request.form.get('action', 'save')
+    if action == 'clear':
+        clear_day_requirements(plan_id, day_date)
+    else:
+        # Sbírám task_id → min/max z formuláře
+        requirements = []
+        for key, value in request.form.items():
+            if key.startswith('min_'):
+                task_id = key[4:]
+                min_c = value.strip()
+                max_c = request.form.get(f'max_{task_id}', '').strip()
+                requirements.append({
+                    'task_id': task_id,
+                    'min_count': min_c or 0,
+                    'max_count': max_c or None,
+                })
+        save_day_requirements(plan_id, day_date, requirements)
+
+    # Vrátíme prázdný response + trigger pro refresh summary
+    return '', 200, {'HX-Trigger': 'cellSaved'}
 
 
 @bp.route('/tasks/<int:dept_id>')

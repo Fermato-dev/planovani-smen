@@ -169,7 +169,10 @@ def clear_all_assignments(plan_id):
 
 
 def get_day_summary(plan_id, date):
-    """Get department staffing counts for a specific day."""
+    """Get department staffing counts for a specific day.
+
+    Only shows departments with at least one person assigned (staff_count > 0).
+    """
     db = get_db()
     return db.execute(
         """SELECT d.id, d.name, d.color, d.min_staff, d.max_staff,
@@ -180,6 +183,7 @@ def get_day_summary(plan_id, date):
                 AND (a.is_absence = 0 OR (a.is_absence = 1 AND a.department_id IS NOT NULL))
            WHERE d.active = 1
            GROUP BY d.id
+           HAVING COUNT(a.id) > 0
            ORDER BY d.sort_order""",
         (plan_id, date)
     ).fetchall()
@@ -188,8 +192,8 @@ def get_day_summary(plan_id, date):
 def get_day_task_summary(plan_id, date):
     """Get task-level staffing counts for a specific day.
 
-    Uses task_date_requirements override when available for that date,
-    otherwise falls back to tasks.min_staff. Only shows tasks with effective min > 0.
+    Shows all tasks with at least one person assigned (staff_count > 0).
+    min_staff is kept for display purposes (green/red indicator) when set.
     """
     db = get_db()
     return db.execute(
@@ -210,15 +214,8 @@ def get_day_task_summary(plan_id, date):
                 AND a.plan_id = :plan_id AND a.date = :date
                 AND (a.is_absence = 0 OR (a.is_absence = 1 AND a.task_id IS NOT NULL))
            WHERE t.active = 1 AND d.active = 1
-             AND COALESCE(
-                     (SELECT r.min_staff FROM task_date_requirements r
-                      WHERE r.task_id = t.id
-                        AND r.date_from <= :date
-                        AND (r.date_to IS NULL OR r.date_to >= :date)
-                      ORDER BY r.date_from DESC LIMIT 1),
-                     t.min_staff
-                 ) > 0
            GROUP BY t.id
+           HAVING COUNT(a.id) > 0
            ORDER BY d.sort_order, t.name""",
         {'plan_id': plan_id, 'date': date}
     ).fetchall()

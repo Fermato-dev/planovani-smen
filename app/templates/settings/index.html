@@ -22,11 +22,12 @@
             <i class="bi bi-clock"></i> Směny
         </button>
     </li>
-    <li class="nav-item">
-        <button class="nav-link {{ 'active' if active_tab == 'requirements' }}" data-bs-toggle="tab" data-bs-target="#tab-requirements">
+    {# Záložka "Požadavky na dny" (starý systém) - dočasně skryta #}
+    {# <li class="nav-item">
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-requirements">
             <i class="bi bi-calendar-check"></i> Požadavky na dny
         </button>
-    </li>
+    </li> #}
     <li class="nav-item">
         <button class="nav-link {{ 'active' if active_tab == 'email' }}" data-bs-toggle="tab" data-bs-target="#tab-email">
             <i class="bi bi-envelope"></i> Email
@@ -66,7 +67,7 @@
                             </td>
                             <td>{{ dept.full_name or '—' }}</td>
                             <td><span class="badge" style="background-color: #{{ dept.color }}; width: 2rem;">&nbsp;</span></td>
-                            <td>{{ dept.min_staff }} / {{ dept.max_staff }}</td>
+                            <td class="d-none">{{ dept.min_staff }} / {{ dept.max_staff }}</td>
                             <td>
                                 {% if dept.active %}
                                     <span class="badge bg-success">Aktivní</span>
@@ -111,11 +112,11 @@
                                                     <label class="form-label">Barva</label>
                                                     <input type="color" name="color" class="form-control form-control-color" value="#{{ dept.color }}">
                                                 </div>
-                                                <div class="col-4">
+                                                <div class="col-4 d-none">
                                                     <label class="form-label">Min lidí</label>
                                                     <input type="number" name="min_staff" class="form-control" value="{{ dept.min_staff }}" min="0">
                                                 </div>
-                                                <div class="col-4">
+                                                <div class="col-4 d-none">
                                                     <label class="form-label">Max lidí</label>
                                                     <input type="number" name="max_staff" class="form-control" value="{{ dept.max_staff }}" min="0">
                                                 </div>
@@ -171,7 +172,7 @@
                                 </span>
                             </td>
                             <td>{{ task.name }}</td>
-                            <td>{{ task.min_staff }} / {{ task.max_staff }}</td>
+                            <td class="d-none">{{ task.min_staff }} / {{ task.max_staff }}</td>
                             <td>
                                 {% if task.active %}
                                     <span class="badge bg-success">Aktivní</span>
@@ -225,11 +226,11 @@
                                                     <label class="form-label">Název práce</label>
                                                     <input type="text" name="name" class="form-control" value="{{ task.name }}" required>
                                                 </div>
-                                                <div class="col-6">
+                                                <div class="col-6 d-none">
                                                     <label class="form-label">Min lidí</label>
                                                     <input type="number" name="min_staff" class="form-control" value="{{ task.min_staff }}" min="0">
                                                 </div>
-                                                <div class="col-6">
+                                                <div class="col-6 d-none">
                                                     <label class="form-label">Max lidí</label>
                                                     <input type="number" name="max_staff" class="form-control" value="{{ task.max_staff }}" min="0">
                                                 </div>
@@ -542,14 +543,9 @@
                             <label class="form-label">Barva</label>
                             <input type="color" name="color" class="form-control form-control-color" value="#FFF2CC">
                         </div>
-                        <div class="col-4">
-                            <label class="form-label">Min lidí</label>
-                            <input type="number" name="min_staff" class="form-control" value="0" min="0">
-                        </div>
-                        <div class="col-4">
-                            <label class="form-label">Max lidí</label>
-                            <input type="number" name="max_staff" class="form-control" value="99" min="0">
-                        </div>
+                        {# min/max skryto - používáme Potřeby dne v plánovači #}
+                        <input type="hidden" name="min_staff" value="0">
+                        <input type="hidden" name="max_staff" value="99">
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -586,16 +582,9 @@
                         <label class="form-label">Název práce</label>
                         <input type="text" name="name" class="form-control" placeholder="lahvování1" required>
                     </div>
-                    <div class="row g-2">
-                        <div class="col-6">
-                            <label class="form-label">Min lidí</label>
-                            <input type="number" name="min_staff" class="form-control" value="0" min="0">
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label">Max lidí</label>
-                            <input type="number" name="max_staff" class="form-control" value="99" min="0">
-                        </div>
-                    </div>
+                    {# min/max skryto - používáme Potřeby dne v plánovači #}
+                    <input type="hidden" name="min_staff" value="0">
+                    <input type="hidden" name="max_staff" value="99">
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Zrušit</button>

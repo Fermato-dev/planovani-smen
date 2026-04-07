@@ -237,6 +237,20 @@ a:hover { color: var(--fm-primary-dim); }
 .summary-cell { font-size: 0.75rem; font-family: var(--fm-font-mono); }
 .staff-ok { color: var(--fm-success); font-weight: 700; }
 .staff-danger { color: var(--fm-danger); font-weight: 700; animation: pulse-danger 2s infinite; }
+.staff-count { color: var(--fm-text); font-weight: 700; }
+
+/* Tlačítko "Potřeby dne" v záhlaví dne */
+.btn-req-day {
+    font-size: 0.65rem; padding: 0.1rem 0.3rem;
+    border: 1px solid var(--fm-border);
+    background: transparent; color: var(--fm-text-muted);
+    border-radius: 3px; line-height: 1;
+}
+.btn-req-day:hover { background: var(--fm-primary); color: #fff; border-color: var(--fm-primary); }
+.btn-req-day.btn-req-active { background: var(--fm-primary); color: #fff; border-color: var(--fm-primary); }
+
+/* Vstupní pole v panelu potřeb */
+.req-input { text-align: center; width: 60px !important; }
 @keyframes pulse-danger { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
 .task-summary-line { font-size: 0.7rem; padding-left: 0.3rem; line-height: 1.4; color: var(--fm-text-muted); }
 .cell-spinner { display: none; }
