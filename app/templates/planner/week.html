@@ -320,7 +320,7 @@
                             <button type="button"
                                     class="btn btn-req-day {% if work_plan_map.get(dates[i].isoformat(), {}).get('lahvovani') or work_plan_map.get(dates[i].isoformat(), {}).get('priprava') %}btn-req-active{% endif %}"
                                     title="Plán práce"
-                                    hx-get="{{ url_for('work_plan.panel', plan_id=plan.id, day_date=dates[i].isoformat(), section='lahvovani') }}"
+                                    hx-get="{{ url_for('work_plan.panel', plan_id=plan.id, day_date=dates[i].isoformat()) }}"
                                     hx-target="#workPlanModal .modal-body-inner"
                                     hx-swap="innerHTML"
                                     data-bs-toggle="modal"

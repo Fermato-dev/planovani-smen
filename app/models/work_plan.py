@@ -3,8 +3,8 @@ from app.db import get_db
 
 # Výchozí šablona – Lahvování
 DEFAULT_LAHVOVANI = [
-    {'time_from': '06:00', 'time_to': '06:15', 'line': 'LAH 1', 'product': '', 'quantity': '', 'note': 'Rozjezd'},
-    {'time_from': '06:00', 'time_to': '06:15', 'line': 'LAH 2', 'product': '', 'quantity': '', 'note': 'Rozjezd'},
+    {'time_from': '06:00', 'time_to': '06:15', 'line': 'LAH 1', 'product': 'Příprava na lahvování', 'quantity': '', 'note': 'proplach lahvovačky, kompresor, lahvičky, etikety, lampa na folie, kartony, přečerpání'},
+    {'time_from': '06:00', 'time_to': '06:15', 'line': 'LAH 2', 'product': 'Příprava na lahvování', 'quantity': '', 'note': 'proplach lahvovačky, kompresor, lahvičky, etikety, lampa na folie, kartony, přečerpání'},
     {'time_from': '06:15', 'time_to': '08:00', 'line': 'LAH 1', 'product': '', 'quantity': '', 'note': ''},
     {'time_from': '06:15', 'time_to': '08:00', 'line': 'LAH 2', 'product': '', 'quantity': '', 'note': ''},
     {'time_from': '08:00', 'time_to': '08:20', 'line': '',       'product': 'Porada / přestávka', 'quantity': '', 'note': ''},
@@ -97,6 +97,34 @@ def copy_from_previous_day(plan_id, date, section):
         if rows:
             return [dict(r) for r in rows], prev_date
     return get_default_entries(section), None
+
+
+def get_employees_for_day(plan_id, date):
+    """Vrátí zaměstnance přiřazené na daný den, seskupené podle oddělení."""
+    db = get_db()
+    rows = db.execute(
+        """SELECT e.name, d.name as dept_name, d.color as dept_color, t.name as task_name
+           FROM assignments a
+           JOIN employees e ON a.employee_id = e.id
+           LEFT JOIN departments d ON a.department_id = d.id
+           LEFT JOIN tasks t ON a.task_id = t.id
+           WHERE a.plan_id = ? AND a.date = ? AND a.is_absence = 0 AND a.department_id IS NOT NULL
+           ORDER BY d.sort_order, e.name""",
+        (plan_id, date)
+    ).fetchall()
+    # Seskupit podle oddělení
+    from collections import OrderedDict
+    result = OrderedDict()
+    for r in rows:
+        dept = r['dept_name'] or '—'
+        color = r['dept_color'] or 'D9D9D9'
+        if dept not in result:
+            result[dept] = {'color': color, 'employees': []}
+        result[dept]['employees'].append({
+            'name': r['name'],
+            'task': r['task_name'] or '',
+        })
+    return result
 
 
 def has_entries_map(plan_id, dates):
