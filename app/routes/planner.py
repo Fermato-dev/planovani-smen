@@ -389,11 +389,19 @@ def send_email(plan_id):
         flash('Nebyli vybráni žádní zaměstnanci.', 'warning')
         return redirect(url_for('planner.week_view', week_start=plan['week_start']))
 
+    shifts = get_all_shifts()
+
     # --- Week 1 (current) ---
     grid1, dates1 = build_plan_grid(plan_id, plan['week_start'])
     summary1, task_summary1 = get_staffing_summary(plan_id, dates1)
-    xlsx1 = generate_week_excel(plan, grid1, dates1, summary1, task_summary1)
-    fn1 = f"Plan_smen_{dates1[0].strftime('%d.%m.')}-{dates1[6].strftime('%d.%m.%Y')}.xlsx"
+    req_map1 = get_requirements_map(plan_id, dates1)
+    html1 = render_template('planner/week_print.html',
+                            plan=plan, grid=grid1, dates=dates1,
+                            summary=summary1, task_summary=task_summary1,
+                            req_map=req_map1, shifts=shifts,
+                            day_names=DAY_NAMES,
+                            print_mode='pdf').encode('utf-8')
+    fn1 = f"Plan_smen_{dates1[0].strftime('%d.%m.')}-{dates1[6].strftime('%d.%m.%Y')}.html"
 
     # --- Week 2 (next week) ---
     parts = plan['week_start'].split('-')
@@ -404,11 +412,17 @@ def send_email(plan_id):
 
     grid2, dates2 = build_plan_grid(next_plan_id, next_ws)
     summary2, task_summary2 = get_staffing_summary(next_plan_id, dates2)
-    xlsx2 = generate_week_excel(next_plan, grid2, dates2, summary2, task_summary2)
-    fn2 = f"Plan_smen_{dates2[0].strftime('%d.%m.')}-{dates2[6].strftime('%d.%m.%Y')}.xlsx"
+    req_map2 = get_requirements_map(next_plan_id, dates2)
+    html2 = render_template('planner/week_print.html',
+                            plan=next_plan, grid=grid2, dates=dates2,
+                            summary=summary2, task_summary=task_summary2,
+                            req_map=req_map2, shifts=shifts,
+                            day_names=DAY_NAMES,
+                            print_mode='pdf').encode('utf-8')
+    fn2 = f"Plan_smen_{dates2[0].strftime('%d.%m.')}-{dates2[6].strftime('%d.%m.%Y')}.html"
 
     # --- Build attachments list and label ---
-    attachments = [(xlsx1, fn1), (xlsx2, fn2)]
+    attachments = [(html1, fn1), (html2, fn2)]
     week_label = f"týdny {plan['week_number']}–{next_plan['week_number']}/{plan['year']}"
 
     sent = 0

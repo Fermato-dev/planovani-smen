@@ -1,4 +1,4 @@
-from flask import Blueprint, make_response, abort, render_template
+from flask import Blueprint, make_response, abort, render_template, request
 from app.models.plan import get_plan_by_week
 from app.models.day_requirement import get_requirements_map
 from app.models.shift import get_all_shifts
@@ -35,10 +35,16 @@ def export_week(week_start):
 
 @bp.route('/week/<week_start>/print')
 def print_week(week_start):
-    """Tisková stránka týdenního plánu (pro uložení jako PDF)."""
+    """Tisková stránka týdenního plánu.
+
+    ?mode=pdf  (výchozí) – A3 landscape, PDF/email verze
+    ?mode=board           – A4 landscape, velké písmo, pro nástěnku
+    """
     plan = get_plan_by_week(week_start)
     if not plan:
         abort(404)
+
+    mode = request.args.get('mode', 'pdf')  # 'pdf' or 'board'
 
     grid, dates = build_plan_grid(plan['id'], week_start)
     summary, task_summary = get_staffing_summary(plan['id'], dates)
@@ -49,4 +55,5 @@ def print_week(week_start):
                            plan=plan, grid=grid, dates=dates,
                            summary=summary, task_summary=task_summary,
                            req_map=req_map, shifts=shifts,
-                           day_names=DAY_NAMES)
+                           day_names=DAY_NAMES,
+                           print_mode=mode)

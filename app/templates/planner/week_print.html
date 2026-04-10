@@ -7,29 +7,37 @@
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+{% set board = (print_mode == 'board') %}
+
 body {
     font-family: 'Segoe UI', Arial, sans-serif;
-    font-size: 13px;
+    font-size: {% if board %}17px{% else %}14px{% endif %};
     color: #1F2937;
     background: #fff;
     padding: 16px;
 }
 
 h1 {
-    font-size: 18px;
+    font-size: {% if board %}22px{% else %}18px{% endif %};
     font-weight: 700;
-    margin-bottom: 4px;
+    margin-bottom: 3px;
+    color: #1E3A8A;
 }
 .subtitle {
-    font-size: 12px;
+    font-size: {% if board %}14px{% else %}12px{% endif %};
     color: #6B7280;
-    margin-bottom: 16px;
+    margin-bottom: 14px;
 }
 
-/* Print button – hidden when printing */
+/* Print buttons – hidden when printing */
+.toolbar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 14px;
+    align-items: center;
+}
 .print-btn {
     display: inline-block;
-    margin-bottom: 16px;
     padding: 8px 20px;
     background: #2563EB;
     color: #fff;
@@ -38,8 +46,13 @@ h1 {
     font-size: 14px;
     cursor: pointer;
     font-weight: 600;
+    text-decoration: none;
 }
 .print-btn:hover { background: #1D4ED8; }
+.btn-secondary {
+    background: #6B7280;
+}
+.btn-secondary:hover { background: #4B5563; }
 
 table {
     width: 100%;
@@ -48,26 +61,25 @@ table {
 }
 
 th, td {
-    border: 1px solid #D1D5DB;
-    padding: 6px 5px;
+    border: 1px solid #C5CAD3;
+    padding: {% if board %}7px 5px{% else %}5px 4px{% endif %};
     vertical-align: top;
 }
 
-/* Column widths */
+/* First column (employee name) */
 th:first-child, td:first-child {
-    width: 140px;
-    font-weight: 600;
+    width: {% if board %}170px{% else %}150px{% endif %};
 }
 
 /* Header row */
 thead th {
-    background: #2563EB;
+    background: #1E40AF;
     color: #fff;
-    font-size: 12px;
+    font-size: {% if board %}14px{% else %}12px{% endif %};
     font-weight: 700;
     text-align: center;
     vertical-align: middle;
-    padding: 8px 4px;
+    padding: {% if board %}9px 4px{% else %}7px 4px{% endif %};
 }
 thead th:first-child {
     background: #1E3A8A;
@@ -78,39 +90,42 @@ thead th.weekend {
 
 /* Employee name */
 .emp-name {
-    font-size: 12px;
-    font-weight: 600;
+    font-size: {% if board %}16px{% else %}13px{% endif %};
+    font-weight: 700;
     color: #111827;
+    padding-top: {% if board %}5px{% else %}4px{% endif %};
 }
 
 /* Weekend columns */
 td.weekend, th.weekend {
-    background: #F5F3FF;
+    background: #F0F4FF;
 }
 
 /* Cell content */
 .cell-dept {
     display: inline-block;
     border-radius: 4px;
-    padding: 1px 5px;
-    font-size: 11px;
+    padding: {% if board %}3px 7px{% else %}2px 5px{% endif %};
+    font-size: {% if board %}14px{% else %}12px{% endif %};
     font-weight: 700;
     color: #1F2937;
     margin-bottom: 2px;
 }
 .cell-task {
     display: block;
-    font-size: 11px;
+    font-size: {% if board %}13px{% else %}11px{% endif %};
     color: #374151;
+    margin-top: 1px;
 }
 .cell-shift {
     display: block;
-    font-size: 10px;
+    font-size: {% if board %}12px{% else %}10px{% endif %};
     color: #6B7280;
+    margin-top: 1px;
 }
 .cell-note {
     display: block;
-    font-size: 10px;
+    font-size: {% if board %}11px{% else %}10px{% endif %};
     color: #9CA3AF;
     font-style: italic;
 }
@@ -119,86 +134,141 @@ td.weekend, th.weekend {
 .absence {
     display: inline-block;
     border-radius: 4px;
-    padding: 2px 6px;
-    font-size: 11px;
+    padding: {% if board %}3px 8px{% else %}2px 6px{% endif %};
+    font-size: {% if board %}13px{% else %}11px{% endif %};
     font-weight: 700;
 }
 .abs-dovolena  { background: #FEF3C7; color: #92400E; }
 .abs-nemoc     { background: #FECACA; color: #991B1B; }
-.abs-lekar     { background: #E0E7FF; color: #3730A3; }
+.abs-lekar     { background: #DBEAFE; color: #1E40AF; }
 .abs-osobni    { background: #D1FAE5; color: #065F46; }
-.abs-nahradni  { background: #F3E8FF; color: #6B21A8; }
+.abs-nahradni  { background: #EDE9FE; color: #5B21B6; }
 .abs-jine      { background: #E5E7EB; color: #374151; }
 
-/* Summary row */
-tr.summary-row td {
-    background: #F3F4F6;
-    font-size: 11px;
+/* Alternating row shading */
+tbody.emp-body tr:nth-child(even) td:not(.weekend) {
+    background: #F8FAFC;
 }
-tr.summary-row td:first-child {
+
+/* Summary section */
+tbody.summary-body tr.summary-sep td {
+    height: 6px;
+    background: #C5CAD3;
+    border: none;
+    padding: 0;
+}
+tbody.summary-body tr.summary-row td {
+    background: #EFF6FF;
+    font-size: {% if board %}13px{% else %}11px{% endif %};
+    vertical-align: top;
+    padding: {% if board %}8px 6px{% else %}5px 5px{% endif %};
+}
+tbody.summary-body tr.summary-row td:first-child {
     font-weight: 700;
-    font-size: 12px;
-    color: #111827;
+    font-size: {% if board %}14px{% else %}12px{% endif %};
+    color: #1E3A8A;
     vertical-align: middle;
+    background: #DBEAFE;
 }
 .summary-dept {
-    margin-bottom: 3px;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-wrap: wrap;
 }
 .dept-badge {
     display: inline-block;
     border-radius: 4px;
-    padding: 1px 5px;
-    font-size: 11px;
+    padding: 2px 6px;
+    font-size: {% if board %}12px{% else %}10px{% endif %};
     font-weight: 700;
     color: #1F2937;
 }
 .summary-count {
     font-weight: 700;
+    font-size: {% if board %}14px{% else %}12px{% endif %};
     color: #111827;
 }
 .summary-remaining {
     color: #D97706;
     font-weight: 700;
+    font-size: {% if board %}11px{% else %}10px{% endif %};
 }
 .task-line {
-    font-size: 10px;
-    color: #6B7280;
-    padding-left: 8px;
+    font-size: {% if board %}11px{% else %}10px{% endif %};
+    color: #4B5563;
+    padding-left: 10px;
+    margin-bottom: 2px;
 }
-.staff-ok   { color: #16A34A; font-weight: 700; }
-.staff-bad  { color: #DC2626; font-weight: 700; }
+.staff-ok   { color: #15803D; font-weight: 700; }
+.staff-bad  { color: #B91C1C; font-weight: 700; }
 
 /* Shift legend */
 .legend {
     margin-top: 14px;
-    font-size: 11px;
+    font-size: {% if board %}12px{% else %}11px{% endif %};
     color: #6B7280;
     border-top: 1px solid #E5E7EB;
     padding-top: 8px;
 }
 
-/* Alternating row shading */
-tbody tr:nth-child(even) td:not(.weekend) {
-    background: #FAFAFA;
-}
-
+/* ===== PRINT STYLES ===== */
 @media print {
-    .print-btn { display: none !important; }
-    body { padding: 0; font-size: 11px; }
-    h1 { font-size: 15px; }
-    @page { size: A3 landscape; margin: 10mm; }
+    .toolbar { display: none !important; }
+    body { padding: 0; }
+
+{% if board %}
+    /* Board print: A4 landscape, large font, clean page breaks */
+    @page { size: A4 landscape; margin: 8mm; }
+    body { font-size: 16px; }
+    h1 { font-size: 20px; }
+    .subtitle { font-size: 13px; }
+    .emp-name { font-size: 15px; }
+    .cell-dept { font-size: 13px; padding: 2px 6px; }
+    .cell-task { font-size: 12px; }
+    .cell-shift { font-size: 11px; }
+    th { font-size: 13px; padding: 7px 3px; }
+    tr { page-break-inside: avoid; break-inside: avoid; }
+    tbody.summary-body { page-break-before: auto; }
+    tbody.summary-body tr.summary-row td { font-size: 12px; }
+{% else %}
+    /* PDF print: A3 landscape, fits on 1 page */
+    @page { size: A3 landscape; margin: 8mm; }
+    body { font-size: 12px; }
+    h1 { font-size: 16px; }
+    .subtitle { font-size: 11px; }
+    .emp-name { font-size: 12px; }
+    .cell-dept { font-size: 11px; padding: 2px 5px; }
+    .cell-task { font-size: 10px; }
+    .cell-shift { font-size: 9px; }
+    th { font-size: 11px; padding: 6px 3px; }
+    th:first-child, td:first-child { width: 140px; }
+    tbody.summary-body tr.summary-row td { font-size: 10px; }
+    tbody.summary-body tr.summary-row td:first-child { font-size: 11px; }
+    .dept-badge { font-size: 9px; }
+    .task-line { font-size: 9px; }
+{% endif %}
 }
 </style>
 </head>
 <body>
 
-<button class="print-btn" onclick="window.print()">🖨 Tisk / Uložit jako PDF</button>
+{% set absence_labels = {'dovolena': 'Dovolená', 'nemoc': 'Nemoc', 'lekar': 'Lékař', 'osobni': 'Osobní', 'nahradni': 'Náhr. volno', 'jine': 'Jiné'} %}
+
+<div class="toolbar">
+    <button class="print-btn" onclick="window.print()">
+        🖨 {% if print_mode == 'board' %}Tisk na nástěnku (A4){% else %}Uložit jako PDF (A3){% endif %}
+    </button>
+    {% if print_mode == 'board' %}
+    <a class="print-btn btn-secondary" href="?mode=pdf">↗ Přepnout na PDF verzi (A3)</a>
+    {% else %}
+    <a class="print-btn btn-secondary" href="?mode=board">↗ Přepnout na nástěnku (A4)</a>
+    {% endif %}
+</div>
 
 <h1>Plán směn – týden {{ plan.week_number }}/{{ plan.year }}</h1>
 <div class="subtitle">{{ dates[0].strftime('%d.%m.') }} – {{ dates[6].strftime('%d.%m.%Y') }}</div>
-
-{% set absence_labels = {'dovolena': 'Dovolená', 'nemoc': 'Nemoc', 'lekar': 'Lékař', 'osobni': 'Osobní', 'nahradni': 'Náhr. volno', 'jine': 'Jiné'} %}
-{% set day_names = ['Po', 'Út', 'St', 'Čt', 'Pá', 'So', 'Ne'] %}
 
 <table>
 <thead>
@@ -211,7 +281,8 @@ tbody tr:nth-child(even) td:not(.weekend) {
         {% endfor %}
     </tr>
 </thead>
-<tbody>
+
+<tbody class="emp-body">
     {% for row in grid %}
     <tr>
         <td class="emp-name">{{ row.employee.name }}</td>
@@ -239,7 +310,9 @@ tbody tr:nth-child(even) td:not(.weekend) {
     </tr>
     {% endfor %}
 </tbody>
-<tfoot>
+
+<tbody class="summary-body">
+    <tr class="summary-sep"><td colspan="8"></td></tr>
     <tr class="summary-row">
         <td>Obsazení</td>
         {% for d in dates %}
@@ -279,7 +352,7 @@ tbody tr:nth-child(even) td:not(.weekend) {
         </td>
         {% endfor %}
     </tr>
-</tfoot>
+</tbody>
 </table>
 
 {% if shifts %}

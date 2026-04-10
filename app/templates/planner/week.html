@@ -112,9 +112,13 @@
            class="btn btn-outline-secondary btn-sm" title="Stáhnout Excel">
             <i class="bi bi-file-earmark-spreadsheet"></i> Excel
         </a>
-        <a href="{{ url_for('export.print_week', week_start=week_start) }}" target="_blank"
-           class="btn btn-outline-secondary btn-sm" title="Tisk / Uložit jako PDF">
-            <i class="bi bi-printer"></i> Tisk
+        <a href="{{ url_for('export.print_week', week_start=week_start, mode='pdf') }}" target="_blank"
+           class="btn btn-outline-secondary btn-sm" title="PDF verze (A3) – pro email a archiv">
+            <i class="bi bi-file-earmark-pdf"></i> PDF
+        </a>
+        <a href="{{ url_for('export.print_week', week_start=week_start, mode='board') }}" target="_blank"
+           class="btn btn-outline-secondary btn-sm" title="Tisk na nástěnku (A4, velké písmo)">
+            <i class="bi bi-printer"></i> Nástěnka
         </a>
         <span class="badge status-{{ plan.status }}">
             {{ 'Koncept' if plan.status == 'draft' else 'Publikováno' }}

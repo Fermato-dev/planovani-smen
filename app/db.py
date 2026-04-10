@@ -41,6 +41,15 @@ def _migrate_db(db):
             db.execute("ALTER TABLE employees ADD COLUMN email TEXT DEFAULT ''")
             db.commit()
 
+    # Ensure app_settings table exists FIRST (needed by subsequent migrations)
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS app_settings (
+            key TEXT PRIMARY KEY,
+            value TEXT DEFAULT ''
+        )
+    """)
+    db.commit()
+
     # Přidat příznak work_plan k oddělením (filtr pro plán práce)
     if 'departments' in tables:
         dept_cols = [r[1] for r in db.execute("PRAGMA table_info(departments)").fetchall()]
@@ -75,15 +84,6 @@ def _migrate_db(db):
                               email_first_sent_to = email_sent_count
                           WHERE email_sent_at IS NOT NULL""")
             db.commit()
-
-    # Ensure app_settings table exists
-    db.execute("""
-        CREATE TABLE IF NOT EXISTS app_settings (
-            key TEXT PRIMARY KEY,
-            value TEXT DEFAULT ''
-        )
-    """)
-    db.commit()
 
     # Ensure users table exists
     db.execute("""
