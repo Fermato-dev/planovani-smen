@@ -311,27 +311,26 @@ def _write_summary(ws, row, dates, summary, task_summary):
 
             if dept_data:
                 count = dept_data['staff_count']
-                min_s = dept_data['min_staff']
-                cell.value = f'{count}/{min_s}'
-
-                if count < min_s:
-                    cell.font = Font(bold=True, size=9, color='DC2626')  # Red
+                min_s = dept_data['min_staff'] or 0
+                if min_s > 0:
+                    cell.value = f'{count}/{min_s}'
+                    cell.font = Font(bold=True if count < min_s else False, size=9,
+                                     color='DC2626' if count < min_s else '16A34A')
                 else:
-                    cell.font = Font(size=9, color='16A34A')  # Green
+                    cell.value = str(count) if count else ''
+                    cell.font = Font(size=9, color='374151')
 
             if d.weekday() >= 5:
                 cell.fill = WEEKEND_FILL
 
-        row += 1
-
-    # Task-level summary (only tasks with min_staff > 0)
-    first_tasks = task_summary.get(first_day_key, [])
-    if first_tasks:
-        for task in first_tasks:
+        # Tasks for this department (nested immediately under dept row)
+        first_day_tasks = [t for t in task_summary.get(first_day_key, [])
+                           if t['department_id'] == dept['id']]
+        for task in first_day_tasks:
             ws.row_dimensions[row].height = 18
             task_label_cell = ws.cell(row=row, column=1, value=f'  ↳ {task["name"]}')
-            task_label_cell.font = Font(size=7, color='6B7280', italic=True)
-            task_label_cell.alignment = Alignment(vertical='center')
+            task_label_cell.font = Font(size=7, color='4B5563', italic=True)
+            task_label_cell.alignment = Alignment(vertical='center', indent=2)
             task_label_cell.border = THIN_BORDER
 
             for i, d in enumerate(dates):
@@ -339,11 +338,7 @@ def _write_summary(ws, row, dates, summary, task_summary):
                 ds = d.isoformat()
                 day_tasks = task_summary.get(ds, [])
 
-                task_data = None
-                for tt in day_tasks:
-                    if tt['id'] == task['id']:
-                        task_data = tt
-                        break
+                task_data = next((tt for tt in day_tasks if tt['id'] == task['id']), None)
 
                 cell = ws.cell(row=row, column=col)
                 cell.border = THIN_BORDER
@@ -351,20 +346,23 @@ def _write_summary(ws, row, dates, summary, task_summary):
 
                 if task_data:
                     count = task_data['staff_count']
-                    min_s = task_data['min_staff']
-                    cell.value = f'{count}/{min_s}'
-
-                    if count < min_s:
-                        cell.font = Font(bold=True, size=8, color='DC2626')
+                    min_s = task_data['min_staff'] or 0
+                    if min_s > 0:
+                        cell.value = f'{count}/{min_s}'
+                        cell.font = Font(bold=True if count < min_s else False, size=8,
+                                         color='DC2626' if count < min_s else '16A34A')
                     else:
-                        cell.font = Font(size=8, color='16A34A')
+                        cell.value = str(count) if count else ''
+                        cell.font = Font(size=8, color='4B5563')
 
                 if d.weekday() >= 5:
                     cell.fill = WEEKEND_FILL
 
             row += 1
 
-    return row
+        row += 1  # blank spacer between departments
+
+    return row - 1  # don't count last blank spacer
 
 
 def _write_shift_legend(ws, row):
