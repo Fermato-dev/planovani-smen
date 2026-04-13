@@ -25,6 +25,22 @@ logger = logging.getLogger(__name__)
 
 bp = Blueprint('planner', __name__, url_prefix='/planner')
 
+
+def _render_pdf(html_string):
+    """Render HTML string to PDF bytes using WeasyPrint.
+    Returns (bytes, extension) tuple.
+    Falls back to UTF-8 HTML if WeasyPrint is unavailable.
+    """
+    try:
+        from weasyprint import HTML
+        return HTML(string=html_string).write_pdf(), '.pdf'
+    except ImportError:
+        logger.warning("WeasyPrint not available – sending HTML instead of PDF")
+        return html_string.encode('utf-8'), '.html'
+    except Exception as e:
+        logger.error(f"WeasyPrint PDF generation failed: {e}", exc_info=True)
+        return html_string.encode('utf-8'), '.html'
+
 DAY_NAMES = ['Po', 'Út', 'St', 'Čt', 'Pá', 'So', 'Ne']
 DAY_NAMES_FULL = ['Pondělí', 'Úterý', 'Středa', 'Čtvrtek', 'Pátek', 'Sobota', 'Neděle']
 
@@ -397,37 +413,45 @@ def send_email(plan_id):
     try:
         shifts = get_all_shifts()
 
+        # plan['week_start'] může být datetime.date nebo string
+        ws1 = plan['week_start']
+        if isinstance(ws1, str):
+            parts = ws1.split('-')
+            ws1 = date(int(parts[0]), int(parts[1]), int(parts[2]))
+        week_start_str1 = ws1.isoformat()
+
         # --- Week 1 (current) ---
-        grid1, dates1 = build_plan_grid(plan_id, plan['week_start'])
+        grid1, dates1 = build_plan_grid(plan_id, week_start_str1)
         summary1, task_summary1 = get_staffing_summary(plan_id, dates1)
         req_map1 = get_requirements_map(plan_id, dates1)
-        html1 = render_template('planner/week_print.html',
-                                plan=plan, grid=grid1, dates=dates1,
-                                summary=summary1, task_summary=task_summary1,
-                                req_map=req_map1, shifts=shifts,
-                                day_names=DAY_NAMES,
-                                print_mode='pdf').encode('utf-8')
-        fn1 = f"Plan_smen_{dates1[0].strftime('%d_%m')}-{dates1[6].strftime('%d_%m_%Y')}.html"
+        html1_str = render_template('planner/week_print.html',
+                                    plan=plan, grid=grid1, dates=dates1,
+                                    summary=summary1, task_summary=task_summary1,
+                                    req_map=req_map1, shifts=shifts,
+                                    day_names=DAY_NAMES,
+                                    print_mode='pdf')
+        pdf1, ext1 = _render_pdf(html1_str)
+        fn1 = f"Plan_smen_T{plan['week_number']}_{dates1[0].strftime('%d%m')}-{dates1[6].strftime('%d%m%Y')}{ext1}"
 
         # --- Week 2 (next week) ---
-        parts = plan['week_start'].split('-')
-        ws = date(int(parts[0]), int(parts[1]), int(parts[2]))
-        next_ws = (ws + timedelta(weeks=1)).isoformat()
+        ws2 = ws1 + timedelta(weeks=1)
+        next_ws = ws2.isoformat()
         next_plan_id, _ = create_or_get_plan(next_ws)
         next_plan = get_plan(next_plan_id)
 
         grid2, dates2 = build_plan_grid(next_plan_id, next_ws)
         summary2, task_summary2 = get_staffing_summary(next_plan_id, dates2)
         req_map2 = get_requirements_map(next_plan_id, dates2)
-        html2 = render_template('planner/week_print.html',
-                                plan=next_plan, grid=grid2, dates=dates2,
-                                summary=summary2, task_summary=task_summary2,
-                                req_map=req_map2, shifts=shifts,
-                                day_names=DAY_NAMES,
-                                print_mode='pdf').encode('utf-8')
-        fn2 = f"Plan_smen_{dates2[0].strftime('%d_%m')}-{dates2[6].strftime('%d_%m_%Y')}.html"
+        html2_str = render_template('planner/week_print.html',
+                                    plan=next_plan, grid=grid2, dates=dates2,
+                                    summary=summary2, task_summary=task_summary2,
+                                    req_map=req_map2, shifts=shifts,
+                                    day_names=DAY_NAMES,
+                                    print_mode='pdf')
+        pdf2, ext2 = _render_pdf(html2_str)
+        fn2 = f"Plan_smen_T{next_plan['week_number']}_{dates2[0].strftime('%d%m')}-{dates2[6].strftime('%d%m%Y')}{ext2}"
 
-        attachments = [(html1, fn1), (html2, fn2)]
+        attachments = [(pdf1, fn1), (pdf2, fn2)]
         week_label = f"týdny {plan['week_number']}–{next_plan['week_number']}/{plan['year']}"
 
     except Exception as e:
