@@ -367,17 +367,22 @@ def fill_week(plan_id, emp_id):
     return redirect(url_for('planner.week_view', week_start=plan['week_start']))
 
 
-@bp.route('/send-email/<int:plan_id>', methods=['POST'])
+@bp.route('/send-email/<int:plan_id>', methods=['GET', 'POST'])
 def send_email(plan_id):
     """Send weekly schedule via email to selected employees.
 
     Always sends TWO weeks: the current viewed week + next week.
-    Each week is a separate Excel attachment in the same email.
+    GET: redirect back to planner (someone navigated directly to URL).
+    POST: process and send.
     """
     plan = get_plan(plan_id)
     if not plan:
         flash('Plán nenalezen.', 'error')
         return redirect(url_for('planner.index'))
+
+    # Handle direct GET navigation gracefully
+    if request.method == 'GET':
+        return redirect(url_for('planner.week_view', week_start=plan['week_start']))
 
     if not is_smtp_configured():
         flash('Email není nakonfigurován. Nastavte Resend API klíč v Nastavení → Email.', 'error')
@@ -389,41 +394,46 @@ def send_email(plan_id):
         flash('Nebyli vybráni žádní zaměstnanci.', 'warning')
         return redirect(url_for('planner.week_view', week_start=plan['week_start']))
 
-    shifts = get_all_shifts()
+    try:
+        shifts = get_all_shifts()
 
-    # --- Week 1 (current) ---
-    grid1, dates1 = build_plan_grid(plan_id, plan['week_start'])
-    summary1, task_summary1 = get_staffing_summary(plan_id, dates1)
-    req_map1 = get_requirements_map(plan_id, dates1)
-    html1 = render_template('planner/week_print.html',
-                            plan=plan, grid=grid1, dates=dates1,
-                            summary=summary1, task_summary=task_summary1,
-                            req_map=req_map1, shifts=shifts,
-                            day_names=DAY_NAMES,
-                            print_mode='pdf').encode('utf-8')
-    fn1 = f"Plan_smen_{dates1[0].strftime('%d.%m.')}-{dates1[6].strftime('%d.%m.%Y')}.html"
+        # --- Week 1 (current) ---
+        grid1, dates1 = build_plan_grid(plan_id, plan['week_start'])
+        summary1, task_summary1 = get_staffing_summary(plan_id, dates1)
+        req_map1 = get_requirements_map(plan_id, dates1)
+        html1 = render_template('planner/week_print.html',
+                                plan=plan, grid=grid1, dates=dates1,
+                                summary=summary1, task_summary=task_summary1,
+                                req_map=req_map1, shifts=shifts,
+                                day_names=DAY_NAMES,
+                                print_mode='pdf').encode('utf-8')
+        fn1 = f"Plan_smen_{dates1[0].strftime('%d_%m')}-{dates1[6].strftime('%d_%m_%Y')}.html"
 
-    # --- Week 2 (next week) ---
-    parts = plan['week_start'].split('-')
-    ws = date(int(parts[0]), int(parts[1]), int(parts[2]))
-    next_ws = (ws + timedelta(weeks=1)).isoformat()
-    next_plan_id, _ = create_or_get_plan(next_ws)
-    next_plan = get_plan(next_plan_id)
+        # --- Week 2 (next week) ---
+        parts = plan['week_start'].split('-')
+        ws = date(int(parts[0]), int(parts[1]), int(parts[2]))
+        next_ws = (ws + timedelta(weeks=1)).isoformat()
+        next_plan_id, _ = create_or_get_plan(next_ws)
+        next_plan = get_plan(next_plan_id)
 
-    grid2, dates2 = build_plan_grid(next_plan_id, next_ws)
-    summary2, task_summary2 = get_staffing_summary(next_plan_id, dates2)
-    req_map2 = get_requirements_map(next_plan_id, dates2)
-    html2 = render_template('planner/week_print.html',
-                            plan=next_plan, grid=grid2, dates=dates2,
-                            summary=summary2, task_summary=task_summary2,
-                            req_map=req_map2, shifts=shifts,
-                            day_names=DAY_NAMES,
-                            print_mode='pdf').encode('utf-8')
-    fn2 = f"Plan_smen_{dates2[0].strftime('%d.%m.')}-{dates2[6].strftime('%d.%m.%Y')}.html"
+        grid2, dates2 = build_plan_grid(next_plan_id, next_ws)
+        summary2, task_summary2 = get_staffing_summary(next_plan_id, dates2)
+        req_map2 = get_requirements_map(next_plan_id, dates2)
+        html2 = render_template('planner/week_print.html',
+                                plan=next_plan, grid=grid2, dates=dates2,
+                                summary=summary2, task_summary=task_summary2,
+                                req_map=req_map2, shifts=shifts,
+                                day_names=DAY_NAMES,
+                                print_mode='pdf').encode('utf-8')
+        fn2 = f"Plan_smen_{dates2[0].strftime('%d_%m')}-{dates2[6].strftime('%d_%m_%Y')}.html"
 
-    # --- Build attachments list and label ---
-    attachments = [(html1, fn1), (html2, fn2)]
-    week_label = f"týdny {plan['week_number']}–{next_plan['week_number']}/{plan['year']}"
+        attachments = [(html1, fn1), (html2, fn2)]
+        week_label = f"týdny {plan['week_number']}–{next_plan['week_number']}/{plan['year']}"
+
+    except Exception as e:
+        logger.error(f"Email preparation failed: {e}", exc_info=True)
+        flash(f'Chyba při přípravě emailu: {e}', 'error')
+        return redirect(url_for('planner.week_view', week_start=plan['week_start']))
 
     sent = 0
     errors = []
@@ -435,7 +445,7 @@ def send_email(plan_id):
                 sent += 1
             except Exception as e:
                 logger.error(f"Email failed for {emp['name']} ({emp['email']}): {e}")
-                errors.append(emp['name'])
+                errors.append(f"{emp['name']} ({e})")
 
     # Update email tracking for BOTH weeks
     if sent > 0:
@@ -444,6 +454,8 @@ def send_email(plan_id):
 
     if errors:
         flash(f'Odesláno: {sent}. Chyba u: {", ".join(errors)}', 'error')
+    elif sent == 0:
+        flash('Žádný zaměstnanec nemá vyplněný email. Doplňte emaily v sekci Zaměstnanci.', 'warning')
     else:
         flash(f'Rozpis na 2 týdny odeslán {sent} zaměstnanc{"i" if sent == 1 else "ům"}.', 'success')
 
