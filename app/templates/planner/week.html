@@ -649,7 +649,7 @@
                                 </span>
                             </div>
                             <small class="text-muted d-block mt-1">
-                                <i class="bi bi-paperclip"></i> Každý týden jako samostatná Excel příloha.
+                                <i class="bi bi-paperclip"></i> Každý týden jako samostatná PDF příloha.
                             </small>
                         </div>
 
@@ -699,7 +699,7 @@
                             Rozpis (náhled)
                             {% endif %}
                             na <strong>týdny {{ plan.week_number }}–{{ next_week_number }}/{{ plan.year }}</strong>
-                            bude odeslán jako 2 Excel přílohy těmto <strong><span id="confirmCount">0</span> zaměstnancům</strong>:
+                            bude odeslán jako 2 PDF přílohy těmto <strong><span id="confirmCount">0</span> zaměstnancům</strong>:
                         </p>
                         <div id="confirmList" class="list-group list-group-flush mb-2"
                              style="max-height: 250px; overflow-y: auto; font-size: 0.85rem;">
@@ -707,7 +707,7 @@
                         </div>
                         <div class="text-muted small">
                             <i class="bi bi-info-circle"></i>
-                            Každý příjemce obdrží email se 2 Excel přílohami (týden {{ plan.week_number }} + {{ next_week_number }}).
+                            Každý příjemce obdrží email se 2 PDF přílohami (týden {{ plan.week_number }} + {{ next_week_number }}).
                         </div>
                     </div>
                     {% else %}
