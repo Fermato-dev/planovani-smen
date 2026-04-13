@@ -477,24 +477,39 @@
     <div class="tab-pane fade {{ 'show active' if active_tab == 'email' }}" id="tab-email">
         <div class="card">
             <div class="card-header">
-                <i class="bi bi-envelope-gear"></i> Nastavení emailů (Resend API)
+                <i class="bi bi-envelope-gear"></i> Nastavení emailů (Gmail SMTP)
             </div>
             <div class="card-body">
                 <form method="POST" action="{{ url_for('settings.email_save') }}">
                     <div class="row g-3">
-                        <div class="col-md-8">
-                            <label class="form-label">Resend API klíč</label>
-                            <input type="password" name="resend_api_key" class="form-control"
-                                   placeholder="{{ '••••••••' if resend_key else 'Zadejte API klíč z resend.com' }}">
-                            {% if resend_key %}
-                            <small class="text-muted">Klíč je uložen. Nechte prázdné, pokud ho nechcete měnit.</small>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Gmail adresa (uživatelské jméno)</label>
+                            <input type="email" name="smtp_username" class="form-control"
+                                   value="{{ smtp.username }}" placeholder="vas@gmail.com">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">App Password (heslo aplikace)</label>
+                            <input type="password" name="smtp_password" class="form-control"
+                                   placeholder="{{ '••••••••••••••••' if smtp.password else 'xxxx xxxx xxxx xxxx' }}">
+                            {% if smtp.password %}
+                            <small class="text-muted">Heslo je uloženo. Nechte prázdné, pokud ho nechcete měnit.</small>
                             {% endif %}
                         </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Odesílatel (From)</label>
+                        <div class="col-md-6">
+                            <label class="form-label">Odesílatel (From) – volitelné</label>
                             <input type="text" name="email_sender" class="form-control"
-                                   value="{{ smtp.sender }}" placeholder="onboarding@resend.dev">
-                            <small class="text-muted">Ověřená doména v Resend</small>
+                                   value="{{ smtp.sender }}" placeholder="Plánování FerMato <vas@gmail.com>">
+                            <small class="text-muted">Pokud nevyplníte, použije se Gmail adresa výše.</small>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">SMTP server</label>
+                            <input type="text" name="smtp_server" class="form-control"
+                                   value="{{ smtp.server or 'smtp.gmail.com' }}" placeholder="smtp.gmail.com">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Port</label>
+                            <input type="number" name="smtp_port" class="form-control"
+                                   value="{{ smtp.port or '587' }}" placeholder="587">
                         </div>
                     </div>
 
@@ -509,27 +524,32 @@
                         </button>
                     </div>
 
-                    {% if resend_key %}
+                    {% if smtp.username and smtp.password %}
                     <div class="alert alert-success mt-3 mb-0 py-2">
                         <i class="bi bi-check-circle"></i>
-                        Resend API je nakonfigurováno.
+                        Gmail SMTP je nakonfigurováno ({{ smtp.username }}).
                     </div>
                     {% else %}
                     <div class="alert alert-warning mt-3 mb-0 py-2">
                         <i class="bi bi-exclamation-triangle"></i>
-                        Resend API není nakonfigurováno — emaily nelze odesílat.
+                        Email není nakonfigurován — vyplňte Gmail adresu a App Password.
                     </div>
                     {% endif %}
                 </form>
 
                 <hr>
-                <h6 class="text-muted"><i class="bi bi-info-circle"></i> Nastavení Resend</h6>
+                <h6 class="text-muted"><i class="bi bi-info-circle"></i> Jak nastavit Gmail App Password</h6>
                 <ol class="text-muted small mb-0">
-                    <li>Zaregistrujte se na <a href="https://resend.com" target="_blank">resend.com</a></li>
-                    <li>Vytvořte <strong>API key</strong> v dashboardu</li>
-                    <li>Pro vlastní doménu (From adresu) přidejte doménu v Resend a nastavte DNS záznamy</li>
-                    <li>Bez vlastní domény použijte <code>onboarding@resend.dev</code> jako odesílatele</li>
+                    <li>Přejděte na <a href="https://myaccount.google.com/security" target="_blank">myaccount.google.com/security</a></li>
+                    <li>Zapněte <strong>Dvoufaktorové ověřování</strong> (pokud ještě není zapnuté)</li>
+                    <li>Vyhledejte <strong>„Hesla aplikací"</strong> (App passwords) a vytvořte nové</li>
+                    <li>Vyberte app: <em>Jiná (vlastní název)</em> → napište „Plánování směn" → klikněte Generovat</li>
+                    <li>Zkopírujte vygenerované 16znakové heslo a vložte ho výše</li>
                 </ol>
+                <p class="text-muted small mt-2 mb-0">
+                    <i class="bi bi-shield-check"></i>
+                    App Password funguje bez ověřené domény – stačí libovolný Gmail účet.
+                </p>
             </div>
         </div>
     </div>

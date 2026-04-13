@@ -212,15 +212,14 @@ def requirement_delete(req_id):
 
 @bp.route('/email-save', methods=['POST'])
 def email_save():
-    """Save Resend email settings and optionally send test."""
-    api_key = request.form.get('resend_api_key', '').strip()
+    """Uloží SMTP nastavení emailu a volitelně odešle test."""
+    username = request.form.get('smtp_username', '').strip()
+    password = request.form.get('smtp_password', '').strip()
     sender = request.form.get('email_sender', '').strip()
+    server = request.form.get('smtp_server', 'smtp.gmail.com').strip() or 'smtp.gmail.com'
+    port = request.form.get('smtp_port', '587').strip() or '587'
 
-    if api_key:
-        set_setting('resend_api_key', api_key)
-    if sender:
-        # Store sender in smtp_sender for backward compatibility
-        save_smtp_settings('', 587, 'true', '', '', sender)
+    save_smtp_settings(server, port, 'true', username, password, sender)
 
     flash('Nastavení emailu uloženo.', 'success')
 
@@ -229,7 +228,8 @@ def email_save():
         try:
             from app.services.email_service import test_connection
             result = test_connection()
-            flash(f'Testovací email odeslán! ✓ (ID: {result.get("id", "ok")})', 'success')
+            method = result.get('method', 'smtp') if isinstance(result, dict) else 'smtp'
+            flash(f'Testovací email odeslán přes {method.upper()}! ✓', 'success')
         except Exception as e:
             flash(f'Test selhal: {e}', 'error')
 
