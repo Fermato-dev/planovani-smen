@@ -6,8 +6,9 @@
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 15px; color: #1F2937; background: #fff; padding: 16px; }
-h1 { font-size: 20px; font-weight: 700; margin-bottom: 2px; }
-.subtitle { font-size: 12px; color: #6B7280; margin-bottom: 14px; }
+.page-date { font-size: 28px; font-weight: 800; color: #1E3A8A; margin-bottom: 2px; letter-spacing: -0.5px; }
+h1 { font-size: 17px; font-weight: 600; color: #374151; margin-bottom: 2px; }
+.subtitle { font-size: 12px; color: #9CA3AF; margin-bottom: 12px; }
 .print-btn { display: inline-block; margin-bottom: 14px; padding: 7px 18px; background: #2563EB; color: #fff; border: none; border-radius: 5px; font-size: 14px; cursor: pointer; font-weight: 600; }
 .print-btn:hover { background: #1D4ED8; }
 
@@ -38,7 +39,8 @@ tr.pause-row td { background: #F3F4F6; color: #6B7280; font-style: italic; }
 @media print {
     .print-btn { display: none !important; }
     body { padding: 0; font-size: 14px; }
-    h1 { font-size: 18px; }
+    .page-date { font-size: 24px; }
+    h1 { font-size: 16px; }
     @page { size: A4 portrait; margin: 10mm; }
     .section-page { page-break-after: always; }
     .section-page:last-child { page-break-after: avoid; }
@@ -53,8 +55,9 @@ tr.pause-row td { background: #F3F4F6; color: #6B7280; font-style: italic; }
 {% if entries %}
 <div class="section-page">
 
+<div class="page-date">{{ day_date_formatted }}</div>
 <h1>Plán práce – {{ label }}</h1>
-<div class="section-date">{{ day_date }} &nbsp;·&nbsp; Vytištěno: {{ now }}</div>
+<div class="subtitle">Vytištěno: {{ now }}</div>
 
 {% if employees %}
 <div class="emp-section">

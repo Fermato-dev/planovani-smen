@@ -78,6 +78,18 @@ def print_day(plan_id, day_date):
         ('koreni', 'Koření', koreni),
     ]
     now = datetime.now().strftime('%d.%m.%Y %H:%M')
+
+    # Česky formátované datum pro nadpis
+    _months = ['', 'ledna', 'února', 'března', 'dubna', 'května', 'června',
+               'července', 'srpna', 'září', 'října', 'listopadu', 'prosince']
+    _days_cs = ['Pondělí', 'Úterý', 'Středa', 'Čtvrtek', 'Pátek', 'Sobota', 'Neděle']
+    try:
+        _dt = datetime.strptime(day_date, '%Y-%m-%d')
+        day_date_formatted = f'{_days_cs[_dt.weekday()]} {_dt.day}. {_months[_dt.month]} {_dt.year}'
+    except Exception:
+        day_date_formatted = day_date
+
     return render_template('planner/work_plan_print.html',
                            plan_id=plan_id, day_date=day_date,
+                           day_date_formatted=day_date_formatted,
                            sections=sections, employees=employees, now=now)

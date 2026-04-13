@@ -237,13 +237,41 @@
         }
     });
 
-    // Přidávání řádků
+    // Přidávání řádků – nový řádek navazuje časem na předchozí
     document.querySelectorAll('.wp-add-row').forEach(function(btn) {
         btn.addEventListener('click', function() {
             const prefix = btn.dataset.prefix;
-            const tmpl = document.getElementById(prefix + 'RowTmpl');
             const tbody = document.getElementById(btn.dataset.target);
-            tbody.appendChild(tmpl.content.cloneNode(true));
+            const tmpl = document.getElementById(prefix + 'RowTmpl');
+
+            // Zjisti čas konce posledního řádku
+            const rows = tbody.querySelectorAll('tr.wp-row');
+            let nextFrom = '';
+            if (rows.length > 0) {
+                const lastRow = rows[rows.length - 1];
+                const toInput = lastRow.querySelector('input[name="' + prefix + '_time_to[]"]');
+                if (toInput && toInput.value.trim()) {
+                    nextFrom = toInput.value.trim();
+                }
+            }
+
+            const clone = tmpl.content.cloneNode(true);
+
+            // Předvyplni čas od = čas do předchozího řádku
+            if (nextFrom) {
+                const fromInput = clone.querySelector('input[name="' + prefix + '_time_from[]"]');
+                if (fromInput) fromInput.value = nextFrom;
+            }
+
+            tbody.appendChild(clone);
+
+            // Zaměř kurzor na pole "do" nového řádku
+            const newRows = tbody.querySelectorAll('tr.wp-row');
+            if (newRows.length > 0) {
+                const newRow = newRows[newRows.length - 1];
+                const toFocus = newRow.querySelector('input[name="' + prefix + '_time_to[]"]');
+                if (toFocus) toFocus.focus();
+            }
         });
     });
 })();
