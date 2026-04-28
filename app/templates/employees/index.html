@@ -47,7 +47,7 @@
                         {% endif %}
                     </td>
                     <td class="text-end">
-                        <a href="{{ url_for('employees.edit', emp_id=emp.id) }}" class="btn btn-action btn-outline-primary">
+                        <a href="{{ url_for('employees.edit', emp_id=emp.id) }}" class="btn btn-action btn-outline-secondary">
                             <i class="bi bi-pencil"></i>
                         </a>
                         <form method="POST" action="{{ url_for('employees.toggle', emp_id=emp.id) }}" class="d-inline">
