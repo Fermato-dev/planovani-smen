@@ -18,31 +18,31 @@
             <button class="hamburger-btn" onclick="toggleSidebar()" aria-label="Menu">
                 <i class="bi bi-list"></i>
             </button>
-            <span class="mobile-topbar-brand">FerMato Smeny</span>
+            <span class="mobile-topbar-brand">FERMATO</span>
         </div>
         <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-brand">
-                <div class="sidebar-brand-icon"><i class="bi bi-calendar3"></i></div>
-                <div class="sidebar-brand-text">FerMato Smeny<small>Planovani smen</small></div>
+                <span class="sidebar-brand-name">FERMATO<span class="brand-dot">.</span></span>
+                <span class="sidebar-brand-sub">Plánování směn</span>
             </div>
             <nav class="sidebar-nav">
-                <div class="sidebar-section-label">Hlavni</div>
+                <div class="sidebar-section-label">Hlavní</div>
                 <a class="sidebar-nav-item {% if request.endpoint and request.endpoint.startswith('dashboard') %}active{% endif %}" href="{{ url_for('dashboard.index') }}">
-                    <i class="bi bi-house-door"></i> Prehled
+                    <i class="bi bi-house-door"></i> Přehled
                 </a>
                 <a class="sidebar-nav-item {% if request.endpoint and request.endpoint.startswith('planner') %}active{% endif %}" href="{{ url_for('planner.index') }}">
-                    <i class="bi bi-table"></i> Planovac
+                    <i class="bi bi-calendar3-week"></i> Planovač
                 </a>
                 <a class="sidebar-nav-item {% if request.endpoint and request.endpoint.startswith('employees') %}active{% endif %}" href="{{ url_for('employees.index') }}">
-                    <i class="bi bi-people"></i> Zamestnanci
+                    <i class="bi bi-people"></i> Zaměstnanci
                 </a>
-                <div class="sidebar-section-label">Sprava</div>
+                <div class="sidebar-section-label">Správa</div>
                 <a class="sidebar-nav-item {% if request.endpoint and request.endpoint.startswith('constraints') %}active{% endif %}" href="{{ url_for('constraints.index') }}">
                     <i class="bi bi-calendar-x"></i> Absence
                 </a>
                 <a class="sidebar-nav-item {% if request.endpoint and request.endpoint.startswith('settings') %}active{% endif %}" href="{{ url_for('settings.index') }}">
-                    <i class="bi bi-gear"></i> Nastaveni
+                    <i class="bi bi-gear"></i> Nastavení
                 </a>
                 <a class="sidebar-nav-item {% if request.endpoint and request.endpoint.startswith('import_csv') %}active{% endif %}" href="{{ url_for('import_csv.index') }}">
                     <i class="bi bi-upload"></i> Import
