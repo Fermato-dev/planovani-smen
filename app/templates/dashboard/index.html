@@ -5,7 +5,7 @@
 <div class="page-header">
     <div>
         <h1><i class="bi bi-house-door"></i> Přehled</h1>
-        <div class="page-header-sub">{{ now.strftime('%A, %-d. %-m. %Y') if now else '' }} — rychlý přehled</div>
+        <div class="page-header-sub">{% if now %}{{ now.strftime('%A') }}, {{ now.day }}. {{ now.month }}. {{ now.year }}{% endif %} — rychlý přehled</div>
     </div>
 </div>
 
