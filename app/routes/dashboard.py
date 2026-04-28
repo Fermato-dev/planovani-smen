@@ -1,3 +1,4 @@
+from datetime import datetime
 from flask import Blueprint, render_template
 from app.models.employee import get_all_employees
 from app.models.department import get_all_departments
@@ -14,4 +15,5 @@ def index():
     return render_template('dashboard/index.html',
                            employees=employees,
                            departments=departments,
-                           shifts=shifts)
+                           shifts=shifts,
+                           now=datetime.today())
