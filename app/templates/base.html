@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Planovani smen{% endblock %} | FerMato</title>
+    <title>{% block title %}Přehled{% endblock %} | FerMato</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -32,7 +32,7 @@
                     <i class="bi bi-house-door"></i> Přehled
                 </a>
                 <a class="sidebar-nav-item {% if request.endpoint and request.endpoint.startswith('planner') %}active{% endif %}" href="{{ url_for('planner.index') }}">
-                    <i class="bi bi-calendar3-week"></i> Planovač
+                    <i class="bi bi-calendar3-week"></i> Plánování
                 </a>
                 <a class="sidebar-nav-item {% if request.endpoint and request.endpoint.startswith('employees') %}active{% endif %}" href="{{ url_for('employees.index') }}">
                     <i class="bi bi-people"></i> Zaměstnanci
@@ -56,11 +56,11 @@
                         <i class="bi bi-chevron-expand"></i>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end">
-                        <li><a class="dropdown-item" href="{{ url_for('auth.change_password') }}"><i class="bi bi-key me-2"></i>Zmena hesla</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('auth.change_password') }}"><i class="bi bi-key me-2"></i>Změna hesla</a></li>
                         <li><hr class="dropdown-divider"></li>
                         <li>
                             <form method="POST" action="{{ url_for('auth.logout') }}" class="d-inline">
-                                <button type="submit" class="dropdown-item"><i class="bi bi-box-arrow-right me-2"></i>Odhlasit se</button>
+                                <button type="submit" class="dropdown-item"><i class="bi bi-box-arrow-right me-2"></i>Odhlásit se</button>
                             </form>
                         </li>
                     </ul>
