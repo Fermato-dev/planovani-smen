@@ -1,42 +1,42 @@
 {% extends "base.html" %}
-{% block title %}Prehled{% endblock %}
+{% block title %}Přehled{% endblock %}
 
 {% block content %}
 <div class="page-header">
     <div>
-        <h1><i class="bi bi-house-door"></i> Prehled</h1>
-        <div class="page-header-sub">Dashboard a rychle akce</div>
+        <h1><i class="bi bi-house-door"></i> Přehled</h1>
+        <div class="page-header-sub">{{ now.strftime('%A, %-d. %-m. %Y') if now else '' }} — rychlý přehled</div>
     </div>
 </div>
 
 <div class="row g-3 mb-4">
     <div class="col-md-4">
-        <div class="stat-card teal">
+        <div class="stat-card primary">
             <i class="bi bi-people stat-card-icon"></i>
             <div class="stat-card-number">{{ employees|length }}</div>
-            <div class="stat-card-label">Aktivnich zamestnancu</div>
+            <div class="stat-card-label">Aktivní zaměstnanci</div>
             <a href="{{ url_for('employees.index') }}" class="btn btn-sm btn-outline-primary mt-3">
                 <i class="bi bi-people"></i> Spravovat
             </a>
         </div>
     </div>
     <div class="col-md-4">
-        <div class="stat-card green">
+        <div class="stat-card slate">
             <i class="bi bi-building stat-card-icon"></i>
             <div class="stat-card-number">{{ departments|length }}</div>
-            <div class="stat-card-label">Oddeleni</div>
-            <a href="{{ url_for('settings.index') }}" class="btn btn-sm btn-outline-success mt-3">
-                <i class="bi bi-gear"></i> Nastaveni
+            <div class="stat-card-label">Oddělení</div>
+            <a href="{{ url_for('settings.index') }}" class="btn btn-sm btn-outline-secondary mt-3">
+                <i class="bi bi-gear"></i> Nastavení
             </a>
         </div>
     </div>
     <div class="col-md-4">
-        <div class="stat-card purple">
+        <div class="stat-card stone">
             <i class="bi bi-clock stat-card-icon"></i>
             <div class="stat-card-number">{{ shifts|length }}</div>
-            <div class="stat-card-label">Typy smen</div>
-            <a href="{{ url_for('settings.index') }}" class="btn btn-sm btn-outline-info mt-3">
-                <i class="bi bi-clock"></i> Nastaveni
+            <div class="stat-card-label">Typy směn</div>
+            <a href="{{ url_for('settings.index') }}" class="btn btn-sm btn-outline-secondary mt-3">
+                <i class="bi bi-clock"></i> Nastavení
             </a>
         </div>
     </div>
@@ -46,18 +46,18 @@
     <div class="col-12">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <span><i class="bi bi-lightning me-1"></i> Rychle akce</span>
+                <span><i class="bi bi-lightning me-1"></i> Rychlé akce</span>
             </div>
             <div class="card-body">
                 <div class="d-flex gap-2 flex-wrap">
                     <a href="{{ url_for('planner.index') }}" class="quick-action-btn primary">
-                        <i class="bi bi-table"></i> Otevrit planovac
+                        <i class="bi bi-calendar3-week"></i> Otevřít planovač
                     </a>
                     <a href="{{ url_for('employees.add') }}" class="quick-action-btn">
-                        <i class="bi bi-person-plus"></i> Pridat zamestnance
+                        <i class="bi bi-person-plus"></i> Přidat zaměstnance
                     </a>
                     <a href="{{ url_for('settings.index') }}" class="quick-action-btn">
-                        <i class="bi bi-gear"></i> Nastaveni
+                        <i class="bi bi-gear"></i> Nastavení
                     </a>
                 </div>
             </div>
@@ -70,12 +70,12 @@
     <div class="card-body">
         <div class="empty-state">
             <i class="bi bi-rocket-takeoff d-block"></i>
-            <h5>Zaciname!</h5>
+            <h5>Začínáme!</h5>
             <p class="text-muted">
-                Pro zacatek zkontrolujte <strong>Nastaveni</strong> (oddeleni, smeny) a pak pridejte <strong>zamestnance</strong>.
+                Pro začátek zkontrolujte <strong>Nastavení</strong> (oddělení, směny) a pak přidejte <strong>zaměstnance</strong>.
             </p>
             <a href="{{ url_for('settings.index') }}" class="btn btn-primary">
-                <i class="bi bi-gear"></i> Otevrit nastaveni
+                <i class="bi bi-gear"></i> Otevřít nastavení
             </a>
         </div>
     </div>
