@@ -189,7 +189,12 @@ def _emp_color(emp_id):
 
 
 def get_board_assignments(plan_id, dates):
-    """Vrátí {date_str: {dept_id: {task_id_or_None: [{'assignment_id':..,'employee_id':..,'name':..,'color':..,'task_name':..}]}}}"""
+    """Employee-centric board data.
+    Vrátí {date_str: {dept_id: [
+        {assignment_id, employee_id, name, color, shift_name, note,
+         tasks: [{bta_id, task_id, task_name}]}
+    ]}}
+    """
     db = get_db()
     result = {}
     for d in dates:
@@ -197,37 +202,61 @@ def get_board_assignments(plan_id, dates):
         result[ds] = {}
 
     rows = db.execute(
-        """SELECT a.id as assignment_id, a.employee_id, a.department_id, a.task_id,
+        """SELECT a.id as assignment_id, a.employee_id, a.department_id,
                   CAST(a.date AS TEXT) as date_str,
+                  a.note,
                   e.name,
-                  t.name as task_name
+                  st.name as shift_name
            FROM assignments a
            JOIN employees e ON e.id = a.employee_id
-           LEFT JOIN tasks t ON t.id = a.task_id
+           LEFT JOIN shift_templates st ON st.id = a.shift_template_id
            WHERE a.plan_id = ? AND a.is_absence = 0
              AND a.date IN ({})
+           ORDER BY e.name
         """.format(','.join('?' for _ in dates)),
         [plan_id] + [d.isoformat() for d in dates]
     ).fetchall()
 
+    assignment_map = {}  # assignment_id → dict v result
+
     for r in rows:
         ds = str(r['date_str'])
         dept_id = r['department_id']
-        task_id = r['task_id']  # může být None
         if ds not in result:
             result[ds] = {}
         if dept_id not in result[ds]:
-            result[ds][dept_id] = {}
-        if task_id not in result[ds][dept_id]:
-            result[ds][dept_id][task_id] = []
-        result[ds][dept_id][task_id].append({
+            result[ds][dept_id] = []
+        entry = {
             'assignment_id': r['assignment_id'],
             'employee_id': r['employee_id'],
             'name': r['name'],
             'color': _emp_color(r['employee_id']),
-            'task_id': task_id,
-            'task_name': r['task_name'],
-        })
+            'shift_name': r['shift_name'] or '',
+            'note': r['note'] or '',
+            'tasks': [],
+        }
+        result[ds][dept_id].append(entry)
+        assignment_map[r['assignment_id']] = entry
+
+    # Přidat tasky z board_task_assignments
+    if assignment_map:
+        placeholders = ','.join('?' for _ in assignment_map)
+        bta_rows = db.execute(
+            f"""SELECT bta.id as bta_id, bta.assignment_id, bta.task_id, t.name as task_name
+               FROM board_task_assignments bta
+               JOIN tasks t ON t.id = bta.task_id
+               WHERE bta.assignment_id IN ({placeholders})
+               ORDER BY t.name""",
+            list(assignment_map.keys())
+        ).fetchall()
+        for r in bta_rows:
+            entry = assignment_map.get(r['assignment_id'])
+            if entry:
+                entry['tasks'].append({
+                    'bta_id': r['bta_id'],
+                    'task_id': r['task_id'],
+                    'task_name': r['task_name'],
+                })
     return result
 
 
@@ -259,9 +288,9 @@ def get_absent_employees_for_dates(dates):
     return result
 
 
-def board_assign_employee(plan_id, employee_id, date_str, dept_id, task_id=None):
-    """Přiřadí zaměstnance do oddělení/práce na datum.
-    Pokud přiřazení již existuje (UNIQUE constraint), aktualizuje dept+task. Vrátí assignment_id."""
+def board_assign_employee(plan_id, employee_id, date_str, dept_id):
+    """Přiřadí zaměstnance do oddělení na datum (bez konkrétní práce – ta se přidává přes board_add_task).
+    Pokud přiřazení již existuje, přesune ho do nového oddělení. Vrátí assignment_id."""
     db = get_db()
     existing = db.execute(
         """SELECT id FROM assignments
@@ -270,18 +299,56 @@ def board_assign_employee(plan_id, employee_id, date_str, dept_id, task_id=None)
     ).fetchone()
     if existing:
         db.execute(
-            "UPDATE assignments SET department_id=?, task_id=? WHERE id=?",
-            (dept_id, task_id, existing['id'])
+            "UPDATE assignments SET department_id=? WHERE id=?",
+            (dept_id, existing['id'])
         )
         db.commit()
         return existing['id']
     cur = db.execute(
-        """INSERT INTO assignments (plan_id, employee_id, date, department_id, task_id, is_absence)
-           VALUES (?, ?, ?, ?, ?, 0)""",
-        (plan_id, employee_id, date_str, dept_id, task_id)
+        """INSERT INTO assignments (plan_id, employee_id, date, department_id, is_absence)
+           VALUES (?, ?, ?, ?, 0)""",
+        (plan_id, employee_id, date_str, dept_id)
     )
     db.commit()
     return cur.lastrowid
+
+
+def board_add_task(assignment_id, task_id):
+    """Přidá práci k přiřazení zaměstnance. Pokud již existuje, nic nedělá."""
+    db = get_db()
+    db.execute(
+        "INSERT OR IGNORE INTO board_task_assignments (assignment_id, task_id) VALUES (?, ?)",
+        (assignment_id, task_id)
+    )
+    db.commit()
+
+
+def board_remove_task(bta_id):
+    """Odebere jednu práci z přiřazení zaměstnance (zaměstnanec zůstane v oddělení)."""
+    db = get_db()
+    db.execute("DELETE FROM board_task_assignments WHERE id = ?", (bta_id,))
+    db.commit()
+
+
+def get_available_tasks_for_assignment(assignment_id, dept_id):
+    """Vrátí aktivní tasky oddělení, které zatím nejsou přiřazeny k danému assignment_id."""
+    db = get_db()
+    already = {r[0] for r in db.execute(
+        "SELECT task_id FROM board_task_assignments WHERE assignment_id = ?",
+        (assignment_id,)
+    ).fetchall()}
+    all_tasks = db.execute(
+        "SELECT id, name FROM tasks WHERE department_id = ? AND active = 1 ORDER BY name",
+        (dept_id,)
+    ).fetchall()
+    return [t for t in all_tasks if t['id'] not in already]
+
+
+def board_set_note(assignment_id, note):
+    """Uloží poznámku k přiřazení zaměstnance."""
+    db = get_db()
+    db.execute("UPDATE assignments SET note=? WHERE id=?", (note, assignment_id))
+    db.commit()
 
 
 def board_unassign_employee(assignment_id):

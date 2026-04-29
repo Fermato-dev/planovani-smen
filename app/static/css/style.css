@@ -375,35 +375,112 @@ dd { color: var(--fm-text); margin-bottom: 0.75rem; }
 @media (max-width: 768px) { .page-header { flex-direction: column; gap: 0.75rem; align-items: flex-start; } .page-header h1 { font-size: 1.15rem; } .main-content { padding: 0.75rem; } }
 @media print { body { background: white; color: #111; } .sidebar, .mobile-topbar, .sidebar-overlay, .btn, .page-header .btn { display: none !important; } .main-content { margin-left: 0; padding: 0; } .card { box-shadow: none; border: 1px solid #ddd; } .planner-grid .emp-name { background: white; } .planner-grid th.day-col { background: white; } }
 
-/* ── Kapacitní nástěnka (board) ──────────────────────────── */
-.board-emp-card {
-  display: inline-flex; align-items: center; gap: 0.2rem;
-  padding: 0.15rem 0.35rem 0.15rem 0.45rem; border-radius: 4px;
-  font-size: 0.8rem; font-weight: 500; color: #fff;
-  margin: 0.1rem; white-space: nowrap; vertical-align: middle;
+/* ── Plánovač (board) ──────────────────────────────────────── */
+.board-day-summary {
+  display: flex; flex-wrap: wrap; gap: 0.5rem;
+}
+.board-summary-badge {
+  background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 6px;
+  padding: 0.3rem 0.7rem; font-size: 0.85rem; font-weight: 500;
+}
+.board-summary-badge .num { font-size: 1.1rem; font-weight: 700; }
+.board-section-title {
+  font-size: 0.68rem; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; color: #6c757d; margin: 0.6rem 0 0.25rem;
+}
+.dept-badge-sm {
+  display: inline-block; padding: 0.05rem 0.35rem; border-radius: 3px;
+  font-size: 0.75rem; font-weight: 600; color: #fff;
+}
+.board-dept-header-row {
+  display: flex; align-items: center; gap: 0.4rem;
+  padding: 0.3rem 0 0.15rem; margin-top: 0.4rem;
+  border-bottom: 1px solid #e9ecef;
+}
+
+/* Employee rows */
+.board-emp-row {
+  display: flex; align-items: center; flex-wrap: wrap;
+  gap: 0.3rem; padding: 0.3rem 0 0.15rem 0.5rem;
+  border-left: 2px solid #e9ecef; margin-left: 0.1rem;
+}
+.board-emp-name-chip {
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  padding: 0.22rem 0.55rem; border-radius: 14px;
+  font-size: 0.82rem; font-weight: 600; color: #fff;
+  white-space: nowrap; flex-shrink: 0;
   box-shadow: 0 1px 3px rgba(0,0,0,.15);
 }
-.board-remove-btn {
-  background: none; border: none; color: rgba(255,255,255,.8);
-  padding: 0 0 0 0.1rem; line-height: 1; cursor: pointer;
-  font-size: 1rem; font-weight: 700;
+.board-shift-badge {
+  font-size: 0.68rem; font-weight: 600;
+  background: rgba(0,0,0,.18); border-radius: 8px;
+  padding: 0.05rem 0.3rem; letter-spacing: .02em;
 }
-.board-remove-btn:hover { color: #fff; }
-.board-add-btn {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 22px; height: 22px; border-radius: 50%;
+.board-emp-tasks {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem;
+  flex: 1;
+}
+.board-task-chip {
+  display: inline-flex; align-items: center; gap: 0.15rem;
+  padding: 0.12rem 0.4rem; border-radius: 10px;
+  background: #fff; border: 1px solid #ced4da;
+  font-size: 0.78rem; color: #495057; white-space: nowrap;
+}
+.board-task-remove-btn {
+  background: none; border: none; color: #adb5bd;
+  padding: 0; line-height: 1; cursor: pointer; font-size: 0.9rem;
+  font-weight: 700;
+}
+.board-task-remove-btn:hover { color: #dc3545; }
+.board-add-task-btn {
+  display: inline-flex; align-items: center; gap: 0.15rem;
+  padding: 0.1rem 0.45rem; border-radius: 10px;
   border: 1.5px dashed #adb5bd; background: none;
-  color: #adb5bd; font-size: 1rem; line-height: 1;
-  cursor: pointer; padding: 0; margin: 0.1rem; vertical-align: middle;
+  color: #6c757d; font-size: 0.75rem; cursor: pointer;
 }
-.board-add-btn:hover { border-color: var(--fm-primary); color: var(--fm-primary); }
-.board-dept-label {
-  font-size: 0.78rem; font-weight: 600; color: #495057;
-  min-width: 110px; display: inline-block;
+.board-add-task-btn:hover { border-color: #0d6efd; color: #0d6efd; }
+.board-remove-emp-btn {
+  background: none; border: none; color: #ced4da;
+  padding: 0 0.25rem; cursor: pointer; font-size: 0.9rem;
+  margin-left: auto; flex-shrink: 0;
 }
+.board-remove-emp-btn:hover { color: #dc3545; }
+
+/* Note inline edit */
+.board-emp-note-wrap {
+  font-size: 0.75rem; color: #6c757d; flex-shrink: 0;
+}
+.board-emp-note-wrap > summary {
+  list-style: none; cursor: pointer; font-style: italic;
+  padding: 0.05rem 0.3rem; border-radius: 4px;
+  white-space: nowrap; max-width: 140px; overflow: hidden; text-overflow: ellipsis;
+}
+.board-emp-note-wrap > summary:hover { background: #f0f0f0; }
+.board-emp-note-wrap > summary::-webkit-details-marker { display: none; }
+.board-note-placeholder { color: #bbb; }
+.board-note-form {
+  display: flex; gap: 0.3rem; margin-top: 0.3rem; min-width: 220px;
+}
+
+/* Add employee row */
+.board-add-emp-row { padding: 0.25rem 0 0.1rem 0.5rem; }
+.board-add-emp-btn {
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  padding: 0.18rem 0.6rem; border-radius: 6px;
+  border: 1.5px dashed #adb5bd; background: none;
+  color: #6c757d; font-size: 0.8rem; cursor: pointer;
+}
+.board-add-emp-btn:hover { border-color: #0d6efd; color: #0d6efd; }
+
+/* Assign panels */
 .board-assign-panel {
   background: #fff; border: 1px solid #dee2e6; border-radius: 6px;
-  padding: 0.5rem; margin-top: 0.3rem; box-shadow: 0 3px 10px rgba(0,0,0,.1);
+  padding: 0.5rem 0.6rem; margin: 0.2rem 0 0.2rem 0.5rem;
+  box-shadow: 0 3px 10px rgba(0,0,0,.08);
+}
+.board-assign-panel-title {
+  font-size: 0.72rem; font-weight: 600; color: #6c757d;
+  margin-bottom: 0.3rem; text-transform: uppercase; letter-spacing: .04em;
 }
 .assign-emp-btn {
   display: inline-flex; align-items: center; padding: 0.15rem 0.4rem;
@@ -412,6 +489,15 @@ dd { color: var(--fm-text); margin-bottom: 0.75rem; }
   box-shadow: 0 1px 2px rgba(0,0,0,.12);
 }
 .assign-emp-btn:hover { filter: brightness(.92); }
+.assign-task-btn {
+  display: inline-flex; align-items: center; padding: 0.15rem 0.5rem;
+  border-radius: 10px; font-size: 0.8rem; font-weight: 500;
+  background: #f0f4ff; border: 1px solid #c5d3f0; color: #3451b2;
+  cursor: pointer; margin: 0.1rem;
+}
+.assign-task-btn:hover { background: #dde6ff; }
+
+/* Unassigned + absent */
 .board-unassigned-card {
   display: inline-flex; padding: 0.15rem 0.4rem; border-radius: 4px;
   font-size: 0.8rem; background: #f8f9fa; color: #495057;
@@ -422,39 +508,8 @@ dd { color: var(--fm-text); margin-bottom: 0.75rem; }
   border-left: none; color: #6c757d;
 }
 .board-unassigned-arrow:hover { background: #e9ecef; }
-.board-day-summary {
-  display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem;
-}
-.board-summary-badge {
-  background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 6px;
-  padding: 0.3rem 0.7rem; font-size: 0.85rem; font-weight: 500;
-}
-.board-summary-badge .num { font-size: 1.1rem; font-weight: 700; }
-.board-section-title {
-  font-size: 0.7rem; font-weight: 700; letter-spacing: .08em;
-  text-transform: uppercase; color: #6c757d; margin: 0.75rem 0 0.3rem;
-}
-.dept-badge-sm {
-  display: inline-block; padding: 0.05rem 0.35rem; border-radius: 3px;
-  font-size: 0.75rem; font-weight: 600; color: #fff;
-}
-.board-dept-row {
-  display: flex; align-items: flex-start; gap: 0.5rem;
-  padding: 0.2rem 0; flex-wrap: wrap;
-}
-.board-absent-card { display: inline-flex; padding: 0.1rem 0.35rem; border-radius: 3px; font-size: 0.78rem; background: #fee; color: #999; margin: 0.1rem; text-decoration: line-through; }
-.board-dept-header-row {
-  display: flex; align-items: center; gap: 0.4rem;
-  padding: 0.35rem 0 0.1rem; margin-top: 0.4rem;
-  border-bottom: 1px solid #e9ecef;
-}
-.board-task-row {
-  display: flex; align-items: flex-start; gap: 0.5rem;
-  padding: 0.18rem 0 0.18rem 0.75rem; flex-wrap: wrap;
-  border-left: 2px solid #e9ecef;
-  margin-left: 0.15rem;
-}
-.board-task-label {
-  font-size: 0.8rem; color: #495057; font-weight: 500;
-  min-width: 120px; padding-top: 0.1rem; flex-shrink: 0;
+.board-absent-card {
+  display: inline-flex; padding: 0.1rem 0.35rem; border-radius: 3px;
+  font-size: 0.78rem; background: #fee; color: #999;
+  margin: 0.1rem; text-decoration: line-through;
 }

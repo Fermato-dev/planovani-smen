@@ -145,6 +145,17 @@ def _migrate_db(db):
     """)
     db.commit()
 
+    # Více prací na jednoho zaměstnance v nástěnce (board)
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS board_task_assignments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            assignment_id INTEGER NOT NULL REFERENCES assignments(id) ON DELETE CASCADE,
+            task_id INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+            UNIQUE(assignment_id, task_id)
+        )
+    """)
+    db.commit()
+
     # Celozávodní dovolená
     db.execute("""
         CREATE TABLE IF NOT EXISTS company_vacations (

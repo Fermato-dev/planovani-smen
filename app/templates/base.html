@@ -31,12 +31,12 @@
                 <a class="sidebar-nav-item {% if request.endpoint and request.endpoint.startswith('dashboard') %}active{% endif %}" href="{{ url_for('dashboard.index') }}">
                     <i class="bi bi-house-door"></i> Prehled
                 </a>
-                <a class="sidebar-nav-item {% if request.endpoint and request.endpoint.startswith('planner') %}active{% endif %}" href="{{ url_for('planner.index') }}">
-                    <i class="bi bi-table"></i> Planovac
-                </a>
                 <a class="sidebar-nav-item {% if request.endpoint and request.endpoint.startswith('capacity') %}active{% endif %}"
                    href="{{ url_for('capacity.index') }}">
-                    <i class="bi bi-bar-chart-steps"></i> Kapacita
+                    <i class="bi bi-kanban"></i> Plánovač
+                </a>
+                <a class="sidebar-nav-item {% if request.endpoint and request.endpoint.startswith('planner') %}active{% endif %}" href="{{ url_for('planner.index') }}">
+                    <i class="bi bi-table"></i> Plán směn
                 </a>
                 <a class="sidebar-nav-item {% if request.endpoint and request.endpoint.startswith('employees') %}active{% endif %}" href="{{ url_for('employees.index') }}">
                     <i class="bi bi-people"></i> Zamestnanci

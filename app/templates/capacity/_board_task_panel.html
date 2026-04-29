@@ -1,0 +1,19 @@
+<div class="board-assign-panel">
+  <div class="board-assign-panel-title">Přidat práci:</div>
+  {% if tasks %}
+  <div class="d-flex flex-wrap gap-1 mb-1">
+    {% for task in tasks %}
+    <form method="POST" action="{{ url_for('capacity.board_add_task_submit') }}" class="d-inline">
+      <input type="hidden" name="week_start" value="{{ week_start }}">
+      <input type="hidden" name="assignment_id" value="{{ assignment_id }}">
+      <input type="hidden" name="task_id" value="{{ task.id }}">
+      <button type="submit" class="assign-task-btn">{{ task.name }}</button>
+    </form>
+    {% endfor %}
+  </div>
+  {% else %}
+  <small class="text-muted">Všechny práce tohoto oddělení jsou přiřazeny</small>
+  {% endif %}
+  <button type="button" class="btn btn-link text-muted p-0" style="font-size:0.75rem;"
+    onclick="document.getElementById('task-panel-{{ assignment_id }}').innerHTML=''">zavřít</button>
+</div>

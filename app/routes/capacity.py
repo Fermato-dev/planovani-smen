@@ -11,8 +11,10 @@ from app.models.capacity import (
     get_or_find_plan, create_plan_for_week,
     get_board_assignments, get_absent_employees_for_dates,
     board_assign_employee, board_unassign_employee,
+    board_add_task, board_remove_task, get_available_tasks_for_assignment,
+    board_set_note,
 )
-from app.models.department import get_all_departments, get_tasks_for_department
+from app.models.department import get_all_departments
 from app.models.employee import get_all_employees
 from app.utils.holidays import get_holidays_for_dates
 from app.models.company_vacation import get_vacation_days_map
@@ -95,17 +97,8 @@ def board_view(week_start):
         logger.exception("board_view: chyba v get_absent_employees_for_dates")
         absent = {d.isoformat(): [] for d in dates}
 
-    # Tasks per department for board display
-    try:
-        tasks_by_dept = {}
-        for d in all_depts:
-            tasks_by_dept[d['id']] = get_tasks_for_department(d['id'], active_only=True)
-    except Exception:
-        logger.exception("board_view: chyba při načítání prací oddělení")
-        tasks_by_dept = {}
-
     # Unassigned: active employees who have no assignment and no full-day absence that day
-    # board structure: {date: {dept_id: {task_id: [assignments]}}}
+    # board structure: {date: {dept_id: [assignments]}}
     try:
         all_emps = get_all_employees(active_only=True)
         unassigned = {}
@@ -113,10 +106,9 @@ def board_view(week_start):
             ds = d.isoformat()
             absent_ids = {e['employee_id'] for e in absent.get(ds, [])}
             assigned_ids = set()
-            for dept_task_map in board.get(ds, {}).values():
-                for task_assignments in dept_task_map.values():
-                    for a in task_assignments:
-                        assigned_ids.add(a['employee_id'])
+            for dept_assignments in board.get(ds, {}).values():
+                for a in dept_assignments:
+                    assigned_ids.add(a['employee_id'])
             from app.models.capacity import _emp_color
             unassigned[ds] = [
                 {'employee_id': e['id'], 'name': e['name'], 'color': _emp_color(e['id'])}
@@ -146,7 +138,6 @@ def board_view(week_start):
         plan_id=plan_id,
         vyroba_depts=vyroba_depts,
         expedice_depts=expedice_depts,
-        tasks_by_dept=tasks_by_dept,
         board=board,
         absent=absent,
         unassigned=unassigned,
@@ -157,14 +148,13 @@ def board_view(week_start):
     )
 
 
-@bp.route('/board/add-panel/<week_start>/<date_str>/<int:dept_id>/<int:task_id>')
-def board_add_panel(week_start, date_str, dept_id, task_id):
-    """task_id=0 znamená přiřazení na oddělení bez konkrétní práce."""
+@bp.route('/board/add-panel/<week_start>/<date_str>/<int:dept_id>')
+def board_add_panel(week_start, date_str, dept_id):
+    """HTMX panel: výběr zaměstnance pro přiřazení do oddělení."""
     plan_id = get_or_find_plan(week_start)
     if plan_id is None:
         plan_id = create_plan_for_week(week_start)
 
-    # Already assigned on this day (any dept/task)
     from app.db import get_db
     db = get_db()
     assigned_rows = db.execute(
@@ -174,7 +164,6 @@ def board_add_panel(week_start, date_str, dept_id, task_id):
     ).fetchall()
     assigned_ids = {r['employee_id'] for r in assigned_rows}
 
-    # Full-day absences on this day
     absent_rows = db.execute(
         """SELECT DISTINCT employee_id FROM constraints
            WHERE date_from <= ? AND date_to >= ?
@@ -191,8 +180,6 @@ def board_add_panel(week_start, date_str, dept_id, task_id):
         if e['id'] not in assigned_ids and e['id'] not in absent_ids
     ]
 
-    real_task_id = task_id if task_id != 0 else None
-
     return render_template(
         'capacity/_board_add_panel.html',
         employees=employees,
@@ -200,9 +187,47 @@ def board_add_panel(week_start, date_str, dept_id, task_id):
         plan_id=plan_id,
         date_str=date_str,
         dept_id=dept_id,
-        task_id=real_task_id,
-        task_id_url=task_id,  # pro zavřít tlačítko (URL fragment)
     )
+
+
+@bp.route('/board/task-panel/<int:assignment_id>/<int:dept_id>')
+def board_task_panel(assignment_id, dept_id):
+    """HTMX panel: výběr práce k přidání k přiřazení zaměstnance."""
+    week_start = request.args.get('week_start', '')
+    tasks = get_available_tasks_for_assignment(assignment_id, dept_id)
+    return render_template(
+        'capacity/_board_task_panel.html',
+        assignment_id=assignment_id,
+        tasks=tasks,
+        week_start=week_start,
+    )
+
+
+@bp.route('/board/add-task', methods=['POST'])
+def board_add_task_submit():
+    week_start = request.form.get('week_start', '')
+    assignment_id = request.form.get('assignment_id', type=int)
+    task_id = request.form.get('task_id', type=int)
+    if assignment_id and task_id:
+        board_add_task(assignment_id, task_id)
+    return redirect(url_for('capacity.board_view', week_start=week_start))
+
+
+@bp.route('/board/remove-task/<int:bta_id>', methods=['POST'])
+def board_remove_task_view(bta_id):
+    week_start = request.form.get('week_start', '')
+    board_remove_task(bta_id)
+    return redirect(url_for('capacity.board_view', week_start=week_start))
+
+
+@bp.route('/board/set-note', methods=['POST'])
+def board_set_note_view():
+    week_start = request.form.get('week_start', '')
+    assignment_id = request.form.get('assignment_id', type=int)
+    note = request.form.get('note', '').strip()
+    if assignment_id is not None:
+        board_set_note(assignment_id, note)
+    return redirect(url_for('capacity.board_view', week_start=week_start))
 
 
 @bp.route('/board/assign', methods=['POST'])
@@ -212,10 +237,9 @@ def board_assign():
     employee_id = request.form.get('employee_id', type=int)
     date_str = request.form.get('date_str', '')
     dept_id = request.form.get('dept_id', type=int)
-    task_id = request.form.get('task_id', type=int)  # může být None
 
     if plan_id and employee_id and date_str and dept_id:
-        board_assign_employee(plan_id, employee_id, date_str, dept_id, task_id)
+        board_assign_employee(plan_id, employee_id, date_str, dept_id)
 
     return redirect(url_for('capacity.board_view', week_start=week_start))
 
