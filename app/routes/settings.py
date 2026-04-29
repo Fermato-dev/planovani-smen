@@ -13,6 +13,7 @@ from app.models.app_settings import get_smtp_settings, save_smtp_settings, get_s
 from app.models.task_requirement import (
     get_all_requirements, get_requirement, create_requirement, update_requirement, delete_requirement
 )
+from app.models.capacity import get_all_block_types, create_block_type, delete_block_type
 
 bp = Blueprint('settings', __name__, url_prefix='/settings')
 
@@ -26,9 +27,11 @@ def index():
     smtp = get_smtp_settings()
     resend_key = get_setting('resend_api_key', '') or os.environ.get('RESEND_API_KEY', '')
     requirements = get_all_requirements()
+    capacity_block_types = get_all_block_types()
     return render_template('settings/index.html',
                            departments=departments, shifts=shifts, tasks=tasks,
                            smtp=smtp, resend_key=resend_key, requirements=requirements,
+                           capacity_block_types=capacity_block_types,
                            active_tab=active_tab)
 
 
@@ -234,6 +237,33 @@ def email_save():
             flash(f'Test selhal: {e}', 'error')
 
     return redirect(url_for('settings.index', tab='email'))
+
+
+@bp.route('/capacity-block/add', methods=['POST'])
+def capacity_block_add():
+    category = request.form.get('category', 'fixed')
+    name = request.form.get('name', '').strip()
+    if not name:
+        flash('Zadejte název bloku.', 'error')
+        return redirect(url_for('settings.index', tab='capacity'))
+    if category not in ('fixed', 'demand'):
+        category = 'fixed'
+    try:
+        create_block_type(category, name)
+        flash(f'Blok "{name}" přidán.', 'success')
+    except Exception as e:
+        flash(f'Chyba: {e}', 'error')
+    return redirect(url_for('settings.index', tab='capacity'))
+
+
+@bp.route('/capacity-block/<int:block_id>/delete', methods=['POST'])
+def capacity_block_delete(block_id):
+    try:
+        delete_block_type(block_id)
+        flash('Blok smazán.', 'success')
+    except Exception as e:
+        flash(f'Chyba: {e}', 'error')
+    return redirect(url_for('settings.index', tab='capacity'))
 
 
 @bp.route('/backup/download')

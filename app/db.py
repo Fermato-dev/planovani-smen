@@ -157,6 +157,32 @@ def _migrate_db(db):
     """)
     db.commit()
 
+    # Kapacitní plánování - typy bloků
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS capacity_block_types (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            category TEXT NOT NULL DEFAULT 'fixed',
+            name TEXT NOT NULL,
+            sort_order INTEGER DEFAULT 0,
+            active INTEGER DEFAULT 1
+        )
+    """)
+    db.commit()
+
+    # Kapacitní plánování - záznamy za týden
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS capacity_entries (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            week_start DATE NOT NULL,
+            date DATE NOT NULL,
+            category TEXT NOT NULL,
+            block_type_id INTEGER DEFAULT NULL,
+            name TEXT NOT NULL DEFAULT '',
+            count INTEGER NOT NULL DEFAULT 0
+        )
+    """)
+    db.commit()
+
     # Auto-create default admin if no users exist
     user_count = db.execute("SELECT COUNT(*) FROM users").fetchone()[0]
     if user_count == 0:

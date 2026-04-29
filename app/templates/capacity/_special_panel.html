@@ -1,0 +1,66 @@
+<div class="p-3">
+    {% if tasks %}
+    <table class="table table-sm mb-3">
+        <thead>
+            <tr>
+                <th>Úkol</th>
+                <th class="text-center">Lidé</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for task in tasks %}
+            <tr>
+                <td>{{ task.name }}</td>
+                <td class="text-center fw-bold">{{ task.count }}</td>
+                <td class="text-end">
+                    <form hx-post="{{ url_for('capacity.special_delete', entry_id=task.id) }}"
+                          hx-target="#special-modal-body"
+                          hx-swap="innerHTML"
+                          class="d-inline">
+                        <input type="hidden" name="week_start" value="{{ week_start }}">
+                        <input type="hidden" name="date_str" value="{{ date_str }}">
+                        <button type="submit" class="btn btn-xs btn-outline-danger"
+                                onclick="return confirm('Smazat úkol?')">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr class="table-light">
+                <td class="text-muted">Celkem</td>
+                <td class="text-center fw-bold">{{ tasks | sum(attribute='count') }}</td>
+                <td></td>
+            </tr>
+        </tfoot>
+    </table>
+    {% else %}
+    <p class="text-muted text-center py-2 mb-3">Žádné mimořádné úkoly pro tento den.</p>
+    {% endif %}
+
+    <hr class="my-2">
+    <form hx-post="{{ url_for('capacity.special_add', week_start=week_start, date_str=date_str) }}"
+          hx-target="#special-modal-body"
+          hx-swap="innerHTML">
+        <div class="row g-2 align-items-end">
+            <div class="col-7">
+                <label class="form-label small mb-1">Název úkolu</label>
+                <input type="text" name="name" class="form-control form-control-sm"
+                       placeholder="Např. přebalování" required>
+            </div>
+            <div class="col-3">
+                <label class="form-label small mb-1">Lidé</label>
+                <input type="number" name="count" class="form-control form-control-sm"
+                       min="0" value="1" required>
+            </div>
+            <div class="col-2">
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="bi bi-plus-lg"></i>
+                </button>
+            </div>
+        </div>
+    </form>
+</div>

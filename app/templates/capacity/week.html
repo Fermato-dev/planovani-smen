@@ -1,0 +1,361 @@
+{% extends "base.html" %}
+{% block title %}Kapacitní plán{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <h1><i class="bi bi-bar-chart-steps"></i> Kapacitní plán</h1>
+    <div class="d-flex align-items-center gap-2">
+        <a href="{{ url_for('capacity.week_view', week_start=prev_week) }}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-chevron-left"></i>
+        </a>
+        <span class="fw-semibold">
+            Týden {{ dates[0].strftime('%d.%m') }} – {{ dates[6].strftime('%d.%m.%Y') }}
+        </span>
+        <a href="{{ url_for('capacity.week_view', week_start=next_week) }}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-chevron-right"></i>
+        </a>
+        {% if week_start != today_week %}
+        <a href="{{ url_for('capacity.week_view', week_start=today_week) }}" class="btn btn-outline-primary btn-sm">
+            Dnes
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-bordered mb-0 cap-table" id="capTable">
+                <thead>
+                    <tr class="cap-header-row">
+                        <th class="cap-label-col">Položka</th>
+                        {% for d in dates %}
+                        {% set ds = d.isoformat() %}
+                        {% set is_holiday = ds in holiday_map %}
+                        {% set is_vacation = ds in vacation_map %}
+                        {% set is_weekend = d.weekday() >= 5 %}
+                        <th class="cap-day-col text-center
+                            {% if is_holiday or is_vacation %}cap-col-holiday{% elif is_weekend %}cap-col-weekend{% endif %}"
+                            data-date="{{ ds }}">
+                            <div class="cap-day-name">{{ day_names[loop.index0] }}</div>
+                            <div class="cap-day-num">{{ d.strftime('%d.%m') }}</div>
+                            {% if is_holiday %}
+                            <div class="cap-holiday-label">{{ holiday_map[ds] }}</div>
+                            {% elif is_vacation %}
+                            <div class="cap-holiday-label">{{ vacation_map[ds] }}</div>
+                            {% endif %}
+                        </th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- DOSTUPNOST -->
+                    <tr class="cap-section-divider">
+                        <td colspan="{{ dates|length + 1 }}" class="cap-section-header">
+                            <i class="bi bi-people"></i> Dostupnost
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="cap-label">Celkem zaměstnanců</td>
+                        {% for d in dates %}
+                        {% set ds = d.isoformat() %}
+                        <td class="text-center cap-cell" data-date="{{ ds }}">
+                            <span class="cap-static">{{ available[ds].total }}</span>
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    <tr>
+                        <td class="cap-label text-muted">Absence / dovolená</td>
+                        {% for d in dates %}
+                        {% set ds = d.isoformat() %}
+                        <td class="text-center cap-cell" data-date="{{ ds }}">
+                            {% if available[ds].is_vacation %}
+                            <span class="cap-static text-warning">celoz.</span>
+                            {% else %}
+                            <span class="cap-static text-danger">
+                                {% if available[ds].absent > 0 %}-{{ available[ds].absent }}{% else %}0{% endif %}
+                            </span>
+                            {% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    <tr class="cap-available-row">
+                        <td class="cap-label fw-bold">= Dostupní</td>
+                        {% for d in dates %}
+                        {% set ds = d.isoformat() %}
+                        {% set dsnodash = ds | replace('-', '') %}
+                        <td class="text-center cap-cell">
+                            <span class="fw-bold cap-dostupni-{{ dsnodash }}
+                                {% if available[ds].available > 0 %}text-success{% else %}text-danger{% endif %}"
+                                data-total="{{ available[ds].total }}"
+                                data-absent="{{ available[ds].absent if not available[ds].is_vacation else available[ds].total }}"
+                                data-vacation="{{ '1' if available[ds].is_vacation else '0' }}">
+                                {{ available[ds].available }}
+                            </span>
+                        </td>
+                        {% endfor %}
+                    </tr>
+
+                    <!-- FIXNÍ ODEČTY -->
+                    <tr class="cap-section-divider">
+                        <td colspan="{{ dates|length + 1 }}" class="cap-section-header cap-section-fixed">
+                            <i class="bi bi-pin-angle"></i> Fixní odečty
+                            {% if not fixed_types %}
+                            <a href="{{ url_for('settings.index', tab='capacity') }}" class="btn btn-xs btn-outline-secondary ms-2">
+                                <i class="bi bi-gear"></i> Přidat typy
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% if fixed_types %}
+                    {% for bt in fixed_types %}
+                    <tr class="cap-fixed-row" data-block-id="{{ bt.id }}">
+                        <td class="cap-label">{{ bt.name }}</td>
+                        {% for d in dates %}
+                        {% set ds = d.isoformat() %}
+                        {% set val = fixed_demand.get((ds, bt.id), 0) %}
+                        <td class="text-center cap-cell">
+                            <input type="number" min="0" class="cap-input cap-fixed-input"
+                                data-week-start="{{ week_start }}"
+                                data-date="{{ ds }}"
+                                data-block-id="{{ bt.id }}"
+                                data-category="fixed"
+                                value="{{ val }}"
+                                hx-post="{{ url_for('capacity.save') }}"
+                                hx-trigger="change"
+                                hx-vals='js:{week_start:this.dataset.weekStart,date:this.dataset.date,block_type_id:this.dataset.blockId,count:this.value,category:this.dataset.category}'
+                                hx-swap="none">
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                    {% else %}
+                    <tr>
+                        <td colspan="{{ dates|length + 1 }}" class="text-center text-muted py-2 small">
+                            Žádné fixní typy. <a href="{{ url_for('settings.index', tab='capacity') }}">Nastavit v Nastavení &rarr; Kapacita</a>
+                        </td>
+                    </tr>
+                    {% endif %}
+                    <tr class="cap-zbyvaji-row">
+                        <td class="cap-label fw-semibold">= Zbývá pro výrobu</td>
+                        {% for d in dates %}
+                        {% set ds = d.isoformat() %}
+                        {% set dsnodash = ds | replace('-', '') %}
+                        <td class="text-center cap-cell">
+                            <span class="fw-semibold cap-zbyvaji-{{ dsnodash }}">—</span>
+                        </td>
+                        {% endfor %}
+                    </tr>
+
+                    <!-- VÝROBNÍ POTŘEBY -->
+                    <tr class="cap-section-divider">
+                        <td colspan="{{ dates|length + 1 }}" class="cap-section-header cap-section-demand">
+                            <i class="bi bi-boxes"></i> Výrobní potřeby
+                            {% if not demand_types %}
+                            <a href="{{ url_for('settings.index', tab='capacity') }}" class="btn btn-xs btn-outline-secondary ms-2">
+                                <i class="bi bi-gear"></i> Přidat typy
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% if demand_types %}
+                    {% for bt in demand_types %}
+                    <tr class="cap-demand-row" data-block-id="{{ bt.id }}">
+                        <td class="cap-label">{{ bt.name }}</td>
+                        {% for d in dates %}
+                        {% set ds = d.isoformat() %}
+                        {% set val = fixed_demand.get((ds, bt.id), 0) %}
+                        <td class="text-center cap-cell">
+                            <input type="number" min="0" class="cap-input cap-demand-input"
+                                data-week-start="{{ week_start }}"
+                                data-date="{{ ds }}"
+                                data-block-id="{{ bt.id }}"
+                                data-category="demand"
+                                value="{{ val }}"
+                                hx-post="{{ url_for('capacity.save') }}"
+                                hx-trigger="change"
+                                hx-vals='js:{week_start:this.dataset.weekStart,date:this.dataset.date,block_type_id:this.dataset.blockId,count:this.value,category:this.dataset.category}'
+                                hx-swap="none">
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                    {% else %}
+                    <tr>
+                        <td colspan="{{ dates|length + 1 }}" class="text-center text-muted py-2 small">
+                            Žádné výrobní potřeby. <a href="{{ url_for('settings.index', tab='capacity') }}">Nastavit v Nastavení &rarr; Kapacita</a>
+                        </td>
+                    </tr>
+                    {% endif %}
+
+                    <!-- MIMOŘÁDNÉ ÚKOLY -->
+                    <tr class="cap-section-divider">
+                        <td colspan="{{ dates|length + 1 }}" class="cap-section-header cap-section-special">
+                            <i class="bi bi-lightning"></i> Mimořádné úkoly
+                        </td>
+                    </tr>
+                    <tr class="cap-special-row">
+                        <td class="cap-label text-muted">Počet lidí</td>
+                        {% for d in dates %}
+                        {% set ds = d.isoformat() %}
+                        {% set dsnodash = ds | replace('-', '') %}
+                        {% set tasks = special.get(ds, []) %}
+                        {% set special_count = tasks | sum(attribute='count') %}
+                        <td class="text-center cap-cell" id="special-cell-{{ dsnodash }}">
+                            <div id="special-panel-{{ dsnodash }}">
+                                <button class="btn btn-xs cap-special-btn {% if special_count > 0 %}btn-warning{% else %}btn-outline-secondary{% endif %}"
+                                    hx-get="{{ url_for('capacity.special_panel', week_start=week_start, date_str=ds) }}"
+                                    hx-target="#special-modal-body"
+                                    hx-swap="innerHTML"
+                                    onclick="openSpecialModal('{{ dsnodash }}')">
+                                    <i class="bi bi-list-task"></i>
+                                    {% if special_count > 0 %}{{ special_count }} lidí{% else %}+{% endif %}
+                                </button>
+                            </div>
+                        </td>
+                        {% endfor %}
+                    </tr>
+
+                    <!-- BILANCE -->
+                    <tr class="cap-section-divider">
+                        <td colspan="{{ dates|length + 1 }}" class="cap-section-header cap-section-bilance">
+                            <i class="bi bi-calculator"></i> Bilance
+                        </td>
+                    </tr>
+                    <tr class="cap-bilance-row">
+                        <td class="cap-label fw-bold">Přebytek / Deficit</td>
+                        {% for d in dates %}
+                        {% set ds = d.isoformat() %}
+                        {% set dsnodash = ds | replace('-', '') %}
+                        <td class="text-center cap-cell">
+                            <span class="fw-bold fs-5 cap-bilance-{{ dsnodash }}">—</span>
+                        </td>
+                        {% endfor %}
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Special tasks modal -->
+<div class="modal fade" id="specialModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-lightning me-2"></i>Mimořádné úkoly</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0" id="special-modal-body">
+                <div class="p-3 text-center text-muted">Načítání...</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Special totals data for JS -->
+<script id="special-data" type="application/json">
+{
+    {% for d in dates %}
+    {% set ds = d.isoformat() %}
+    {% set dsnodash = ds | replace('-', '') %}
+    {% set tasks = special.get(ds, []) %}
+    "{{ dsnodash }}": {{ tasks | sum(attribute='count') }}{% if not loop.last %},{% endif %}
+    {% endfor %}
+}
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    // ---- Special modal ----
+    var _currentSpecialDate = null;
+    window.openSpecialModal = function(dsnodash) {
+        _currentSpecialDate = dsnodash;
+        var modal = new bootstrap.Modal(document.getElementById('specialModal'));
+        modal.show();
+    };
+
+    // After HTMX swaps into #special-modal-body, refresh the special totals row button
+    document.body.addEventListener('htmx:afterSwap', function(evt) {
+        if (evt.detail.target && evt.detail.target.id === 'special-modal-body') {
+            // Give time for DOM to settle then recalc
+            setTimeout(recalcAll, 50);
+        }
+    });
+
+    // ---- Live calculation ----
+    function getVal(input) {
+        return parseInt(input.value) || 0;
+    }
+
+    function recalcCol(ds) {
+        var dsnodash = ds.replace(/-/g, '');
+
+        // Available
+        var dostEl = document.querySelector('.cap-dostupni-' + dsnodash);
+        var dostupni = dostEl ? (parseInt(dostEl.textContent) || 0) : 0;
+
+        // Fixed sum
+        var fixedSum = 0;
+        document.querySelectorAll('.cap-fixed-input[data-date="' + ds + '"]').forEach(function(inp) {
+            fixedSum += getVal(inp);
+        });
+
+        // Zbývá
+        var zbyvaji = dostupni - fixedSum;
+        var zbyvEl = document.querySelector('.cap-zbyvaji-' + dsnodash);
+        if (zbyvEl) {
+            zbyvEl.textContent = zbyvaji;
+            zbyvEl.className = zbyvEl.className.replace(/text-\w+/g, '');
+            zbyvEl.classList.add(zbyvaji >= 0 ? 'text-success' : 'text-danger');
+        }
+
+        // Demand sum
+        var demandSum = 0;
+        document.querySelectorAll('.cap-demand-input[data-date="' + ds + '"]').forEach(function(inp) {
+            demandSum += getVal(inp);
+        });
+
+        // Special sum - read from data attribute on button or from JSON
+        var specialSum = 0;
+        try {
+            var specialData = JSON.parse(document.getElementById('special-data').textContent);
+            specialSum = specialData[dsnodash] || 0;
+        } catch(e) {}
+
+        // Bilance
+        var bilance = zbyvaji - demandSum - specialSum;
+        var bilEl = document.querySelector('.cap-bilance-' + dsnodash);
+        if (bilEl) {
+            bilEl.textContent = (bilance >= 0 ? '+' : '') + bilance;
+            bilEl.className = bilEl.className.replace(/text-\w+/g, '');
+            bilEl.classList.add(bilance >= 0 ? 'text-success' : 'text-danger');
+        }
+    }
+
+    function recalcAll() {
+        document.querySelectorAll('[data-date]').forEach(function(el) {
+            if (el.tagName === 'TH') {
+                recalcCol(el.dataset.date);
+            }
+        });
+    }
+
+    // Listen to input changes
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('cap-input')) {
+            recalcCol(e.target.dataset.date);
+        }
+    });
+
+    // Initial calculation
+    document.addEventListener('DOMContentLoaded', recalcAll);
+    // Also run immediately in case DOMContentLoaded already fired
+    if (document.readyState !== 'loading') {
+        recalcAll();
+    }
+})();
+</script>
+{% endblock %}

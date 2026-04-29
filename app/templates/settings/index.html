@@ -8,7 +8,7 @@
 
 <ul class="nav nav-tabs mb-3" role="tablist">
     <li class="nav-item">
-        <button class="nav-link {{ 'active' if active_tab not in ('email', 'requirements') }}" data-bs-toggle="tab" data-bs-target="#tab-departments">
+        <button class="nav-link {{ 'active' if active_tab not in ('email', 'requirements', 'capacity') }}" data-bs-toggle="tab" data-bs-target="#tab-departments">
             <i class="bi bi-building"></i> Oddělení
         </button>
     </li>
@@ -29,6 +29,11 @@
         </button>
     </li> #}
     <li class="nav-item">
+        <button class="nav-link {{ 'active' if active_tab == 'capacity' }}" data-bs-toggle="tab" data-bs-target="#tab-capacity">
+            <i class="bi bi-bar-chart-steps"></i> Kapacita
+        </button>
+    </li>
+    <li class="nav-item">
         <button class="nav-link {{ 'active' if active_tab == 'email' }}" data-bs-toggle="tab" data-bs-target="#tab-email">
             <i class="bi bi-envelope"></i> Email
         </button>
@@ -42,7 +47,7 @@
 
 <div class="tab-content">
     <!-- DEPARTMENTS TAB -->
-    <div class="tab-pane fade {{ 'show active' if active_tab not in ('email', 'requirements') }}" id="tab-departments">
+    <div class="tab-pane fade {{ 'show active' if active_tab not in ('email', 'requirements', 'capacity') }}" id="tab-departments">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span>Oddělení (úseky)</span>
@@ -473,6 +478,97 @@
         </div>
     </div>
 
+    <!-- CAPACITY TAB -->
+    <div class="tab-pane fade {{ 'show active' if active_tab == 'capacity' }}" id="tab-capacity">
+        <div class="row g-3">
+            <!-- Fixní odečty -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-pin-angle me-1"></i> Fixní odečty</span>
+                        <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addFixedBlockModal">
+                            <i class="bi bi-plus-lg"></i> Přidat
+                        </button>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Název</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            {% for bt in capacity_block_types if bt.category == 'fixed' %}
+                                <tr>
+                                    <td>{{ bt.name }}</td>
+                                    <td class="text-end">
+                                        <form method="POST" action="{{ url_for('settings.capacity_block_delete', block_id=bt.id) }}" class="d-inline"
+                                              onsubmit="return confirm('Smazat blok {{ bt.name }}? Všechna data pro tento blok budou smazána.')">
+                                            <button class="btn btn-action btn-outline-danger">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            {% else %}
+                                <tr>
+                                    <td colspan="2" class="text-center text-muted py-3">
+                                        Žádné fixní odečty. Přidejte první (např. VEDS, Vývoj, VINAcz).
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Výrobní potřeby -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-boxes me-1"></i> Výrobní potřeby</span>
+                        <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addDemandBlockModal">
+                            <i class="bi bi-plus-lg"></i> Přidat
+                        </button>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Název</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            {% for bt in capacity_block_types if bt.category == 'demand' %}
+                                <tr>
+                                    <td>{{ bt.name }}</td>
+                                    <td class="text-end">
+                                        <form method="POST" action="{{ url_for('settings.capacity_block_delete', block_id=bt.id) }}" class="d-inline"
+                                              onsubmit="return confirm('Smazat blok {{ bt.name }}? Všechna data pro tento blok budou smazána.')">
+                                            <button class="btn btn-action btn-outline-danger">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            {% else %}
+                                <tr>
+                                    <td colspan="2" class="text-center text-muted py-3">
+                                        Žádné výrobní potřeby. Přidejte první (např. Rajčata, Papriky).
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- EMAIL TAB -->
     <div class="tab-pane fade {{ 'show active' if active_tab == 'email' }}" id="tab-email">
         <div class="card">
@@ -552,6 +648,52 @@
                 </p>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- ADD FIXED BLOCK MODAL -->
+<div class="modal fade" id="addFixedBlockModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST" action="{{ url_for('settings.capacity_block_add') }}">
+            <input type="hidden" name="category" value="fixed">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Nový fixní odečet</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <label class="form-label">Název</label>
+                    <input type="text" name="name" class="form-control" placeholder="Např. VEDS" required>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Zrušit</button>
+                    <button type="submit" class="btn btn-primary">Přidat</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ADD DEMAND BLOCK MODAL -->
+<div class="modal fade" id="addDemandBlockModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST" action="{{ url_for('settings.capacity_block_add') }}">
+            <input type="hidden" name="category" value="demand">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Nová výrobní potřeba</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <label class="form-label">Název</label>
+                    <input type="text" name="name" class="form-control" placeholder="Např. Rajčata" required>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Zrušit</button>
+                    <button type="submit" class="btn btn-primary">Přidat</button>
+                </div>
+            </div>
+        </form>
     </div>
 </div>
 

@@ -125,4 +125,7 @@ def create_app():
     from app.routes.work_plan import bp as work_plan_bp
     app.register_blueprint(work_plan_bp)
 
+    from app.routes.capacity import bp as capacity_bp
+    app.register_blueprint(capacity_bp)
+
     return app

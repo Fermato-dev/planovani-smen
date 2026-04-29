@@ -1,0 +1,124 @@
+from datetime import date, timedelta
+from flask import Blueprint, render_template, request, redirect, url_for, flash, make_response
+from app.services.planner_service import get_monday, get_week_dates
+from app.models.capacity import (
+    get_block_types, get_entries_for_week, save_entry,
+    add_special_task, delete_entry, get_available_per_day
+)
+from app.utils.holidays import get_holidays_for_dates
+from app.models.company_vacation import get_vacation_days_map
+
+bp = Blueprint('capacity', __name__, url_prefix='/capacity')
+
+DAY_NAMES = ['Po', 'Ut', 'St', 'Ct', 'Pa', 'So', 'Ne']
+DAY_NAMES_CZ = ['Po', 'Út', 'St', 'Čt', 'Pá', 'So', 'Ne']
+
+
+@bp.route('/')
+def index():
+    monday = get_monday()
+    return redirect(url_for('capacity.week_view', week_start=monday.isoformat()))
+
+
+@bp.route('/week/<week_start>')
+def week_view(week_start):
+    parts = week_start.split('-')
+    ws = date(int(parts[0]), int(parts[1]), int(parts[2]))
+    # Snap to Monday
+    ws = ws - timedelta(days=ws.weekday())
+    week_start = ws.isoformat()
+
+    dates = get_week_dates(week_start)
+    prev_week = (ws - timedelta(weeks=1)).isoformat()
+    next_week = (ws + timedelta(weeks=1)).isoformat()
+    today_week = get_monday().isoformat()
+
+    fixed_types = get_block_types('fixed')
+    demand_types = get_block_types('demand')
+    fixed_demand, special = get_entries_for_week(week_start)
+    available = get_available_per_day(dates)
+    holiday_map = get_holidays_for_dates(dates)
+    vacation_map = get_vacation_days_map(dates)
+
+    return render_template(
+        'capacity/week.html',
+        week_start=week_start,
+        dates=dates,
+        prev_week=prev_week,
+        next_week=next_week,
+        today_week=today_week,
+        fixed_types=fixed_types,
+        demand_types=demand_types,
+        fixed_demand=fixed_demand,
+        special=special,
+        available=available,
+        holiday_map=holiday_map,
+        vacation_map=vacation_map,
+        day_names=DAY_NAMES_CZ,
+    )
+
+
+@bp.route('/save', methods=['POST'])
+def save():
+    week_start = request.form.get('week_start', '')
+    date_str = request.form.get('date', '')
+    block_type_id = request.form.get('block_type_id', '')
+    count = request.form.get('count', '0')
+    category = request.form.get('category', 'fixed')
+
+    try:
+        count_int = int(count) if count else 0
+        block_id_int = int(block_type_id)
+        save_entry(week_start, date_str, category, block_id_int, count_int)
+    except (ValueError, Exception):
+        return '', 400
+
+    return '', 204
+
+
+@bp.route('/special/<week_start>/<date_str>')
+def special_panel(week_start, date_str):
+    _, special = get_entries_for_week(week_start)
+    tasks = special.get(date_str, [])
+    return render_template(
+        'capacity/_special_panel.html',
+        week_start=week_start,
+        date_str=date_str,
+        tasks=tasks,
+    )
+
+
+@bp.route('/special/<week_start>/<date_str>/add', methods=['POST'])
+def special_add(week_start, date_str):
+    name = request.form.get('name', '').strip()
+    count = request.form.get('count', '0')
+    if name:
+        try:
+            add_special_task(week_start, date_str, name, int(count))
+        except ValueError:
+            pass
+
+    _, special = get_entries_for_week(week_start)
+    tasks = special.get(date_str, [])
+    return render_template(
+        'capacity/_special_panel.html',
+        week_start=week_start,
+        date_str=date_str,
+        tasks=tasks,
+    )
+
+
+@bp.route('/special/<int:entry_id>/delete', methods=['POST'])
+def special_delete(entry_id):
+    week_start = request.form.get('week_start', '')
+    date_str = request.form.get('date_str', '')
+    delete_entry(entry_id)
+
+    _, special = get_entries_for_week(week_start)
+    tasks = special.get(date_str, [])
+    return render_template(
+        'capacity/_special_panel.html',
+        week_start=week_start,
+        date_str=date_str,
+        tasks=tasks,
+    )
