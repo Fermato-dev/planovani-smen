@@ -1,5 +1,8 @@
+import logging
 from datetime import date, timedelta
 from flask import Blueprint, render_template, request, redirect, url_for, flash, make_response
+
+logger = logging.getLogger(__name__)
 from app.services.planner_service import get_monday, get_week_dates
 from app.models.capacity import (
     get_block_types, get_entries_for_week, save_entry, clear_entry,
@@ -52,37 +55,65 @@ def board_view(week_start):
     vacation_map = get_vacation_days_map(dates)
 
     # Plan
-    plan_id = get_or_find_plan(week_start)
-    if plan_id is None:
-        plan_id = create_plan_for_week(week_start)
+    try:
+        plan_id = get_or_find_plan(week_start)
+        if plan_id is None:
+            plan_id = create_plan_for_week(week_start)
+    except Exception:
+        logger.exception("board_view: chyba při hledání/vytváření plánu")
+        raise
 
-    # Departments split by work_plan
-    all_depts = get_all_departments(active_only=True)
-    vyroba_depts = [d for d in all_depts if d['work_plan'] == 1]
-    expedice_depts = [d for d in all_depts if d['work_plan'] == 0]
+    # Departments split by work_plan (defensive – work_plan migration may not have run yet)
+    try:
+        all_depts = get_all_departments(active_only=True)
+        vyroba_depts = []
+        expedice_depts = []
+        for d in all_depts:
+            try:
+                wp = d['work_plan']
+            except (IndexError, KeyError):
+                wp = 1  # default: výroba
+            if wp == 0:
+                expedice_depts.append(d)
+            else:
+                vyroba_depts.append(d)
+    except Exception:
+        logger.exception("board_view: chyba při načítání oddělení")
+        raise
 
     # Board assignments
-    board = get_board_assignments(plan_id, dates)
+    try:
+        board = get_board_assignments(plan_id, dates)
+    except Exception:
+        logger.exception("board_view: chyba v get_board_assignments")
+        raise
 
     # Absences
-    absent = get_absent_employees_for_dates(dates)
+    try:
+        absent = get_absent_employees_for_dates(dates)
+    except Exception:
+        logger.exception("board_view: chyba v get_absent_employees_for_dates")
+        absent = {d.isoformat(): [] for d in dates}
 
     # Unassigned: active employees who have no assignment and no full-day absence that day
-    all_emps = get_all_employees(active_only=True)
-    unassigned = {}
-    for d in dates:
-        ds = d.isoformat()
-        absent_ids = {e['employee_id'] for e in absent.get(ds, [])}
-        # collect all assigned employee_ids for this day
-        assigned_ids = set()
-        for dept_assignments in board.get(ds, {}).values():
-            for a in dept_assignments:
-                assigned_ids.add(a['employee_id'])
-        unassigned[ds] = [
-            {'employee_id': e['id'], 'name': e['name'], 'color': e['color']}
-            for e in all_emps
-            if e['id'] not in assigned_ids and e['id'] not in absent_ids
-        ]
+    try:
+        all_emps = get_all_employees(active_only=True)
+        unassigned = {}
+        for d in dates:
+            ds = d.isoformat()
+            absent_ids = {e['employee_id'] for e in absent.get(ds, [])}
+            assigned_ids = set()
+            for dept_assignments in board.get(ds, {}).values():
+                for a in dept_assignments:
+                    assigned_ids.add(a['employee_id'])
+            unassigned[ds] = [
+                {'employee_id': e['id'], 'name': e['name'], 'color': e['color'] or 'aaaaaa'}
+                for e in all_emps
+                if e['id'] not in assigned_ids and e['id'] not in absent_ids
+            ]
+    except Exception:
+        logger.exception("board_view: chyba při výpočtu nepřiřazených")
+        raise
 
     return render_template(
         'capacity/board.html',

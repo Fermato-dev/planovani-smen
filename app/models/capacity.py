@@ -201,22 +201,30 @@ def get_board_assignments(plan_id, dates):
 
 
 def get_absent_employees_for_dates(dates):
-    """Vrátí {date_str: [{'employee_id':..,'name':..,'color':..}]} pro CELODENNÍ absence (half_day=0 nebo NULL)."""
+    """Vrátí {date_str: [{'employee_id':..,'name':..,'color':..}]} pro CELODENNÍ absence.
+    Defenzivně — funguje i bez half_day sloupce (migration ještě neproběhla).
+    """
     db = get_db()
+    # Zjisti, zda sloupec half_day existuje
+    c_cols = [r[1] for r in db.execute("PRAGMA table_info(constraints)").fetchall()]
+    has_half_day = 'half_day' in c_cols
+
+    half_filter = "AND (c.half_day IS NULL OR c.half_day = 0)" if has_half_day else ""
+
     result = {}
     for d in dates:
         ds = d.isoformat()
         rows = db.execute(
-            """SELECT e.id as employee_id, e.name, e.color
+            f"""SELECT e.id as employee_id, e.name, e.color
                FROM constraints c
                JOIN employees e ON e.id = c.employee_id
                WHERE c.date_from <= ? AND c.date_to >= ?
-                 AND (c.half_day IS NULL OR c.half_day = 0)
+                 {half_filter}
                  AND e.active = 1
                ORDER BY e.name""",
             (ds, ds)
         ).fetchall()
-        result[ds] = [{'employee_id': r['employee_id'], 'name': r['name'], 'color': r['color']} for r in rows]
+        result[ds] = [{'employee_id': r['employee_id'], 'name': r['name'], 'color': r['color'] or 'aaaaaa'} for r in rows]
     return result
 
 
@@ -249,9 +257,14 @@ def board_unassign_employee(assignment_id):
 def get_available_per_day(dates):
     """Returns dict: date_str -> {total, absent_full, absent_half, available, is_vacation}
     Půldenní absence (half_day=1) se počítají jako 0.5.
+    Defenzivní: funguje i bez half_day sloupce.
     """
     db = get_db()
     total = db.execute("SELECT COUNT(*) FROM employees WHERE active=1").fetchone()[0]
+    # Zjisti, zda sloupec half_day existuje
+    c_cols = [r[1] for r in db.execute("PRAGMA table_info(constraints)").fetchall()]
+    has_half_day = 'half_day' in c_cols
+
     result = {}
     for d in dates:
         ds = d.isoformat()
@@ -269,21 +282,29 @@ def get_available_per_day(dates):
             }
             continue
 
-        # Full-day absences (half_day = 0 or column doesn't exist yet)
-        full = db.execute(
-            """SELECT COUNT(DISTINCT employee_id) FROM constraints
-               WHERE date_from <= ? AND date_to >= ?
-                 AND (half_day IS NULL OR half_day = 0)""",
-            (ds, ds)
-        ).fetchone()[0]
-
-        # Half-day absences (half_day = 1)
-        half = db.execute(
-            """SELECT COUNT(DISTINCT employee_id) FROM constraints
-               WHERE date_from <= ? AND date_to >= ?
-                 AND half_day = 1""",
-            (ds, ds)
-        ).fetchone()[0]
+        if has_half_day:
+            # Full-day absences
+            full = db.execute(
+                """SELECT COUNT(DISTINCT employee_id) FROM constraints
+                   WHERE date_from <= ? AND date_to >= ?
+                     AND (half_day IS NULL OR half_day = 0)""",
+                (ds, ds)
+            ).fetchone()[0]
+            # Half-day absences
+            half = db.execute(
+                """SELECT COUNT(DISTINCT employee_id) FROM constraints
+                   WHERE date_from <= ? AND date_to >= ?
+                     AND half_day = 1""",
+                (ds, ds)
+            ).fetchone()[0]
+        else:
+            # half_day column doesn't exist yet — count all constraints as full-day
+            full = db.execute(
+                """SELECT COUNT(DISTINCT employee_id) FROM constraints
+                   WHERE date_from <= ? AND date_to >= ?""",
+                (ds, ds)
+            ).fetchone()[0]
+            half = 0
 
         # Effective absence = full + 0.5 * half
         effective_absent = full + half * 0.5
