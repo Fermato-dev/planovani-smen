@@ -381,11 +381,15 @@ def fill_week(plan_id, emp_id):
         # Skip weekends unless explicitly included
         if not include_weekends and i >= 5:
             continue
-        # Skip public holidays (only for regular shifts, not absences)
-        if not is_absence and d.isoformat() in holiday_map:
-            continue
         # Skip days the employee doesn't work (only for regular shifts)
         if not is_absence and emp and not employee_works_on_day(emp, d.weekday()):
+            continue
+        # Public holidays → mark as svátek (only for regular fills, not manual absence)
+        if not is_absence and d.isoformat() in holiday_map:
+            upsert_assignment(plan_id, emp_id, d.isoformat(),
+                              is_absence=1, absence_type='svatek',
+                              note=holiday_map[d.isoformat()])
+            filled += 1
             continue
         if is_absence:
             upsert_assignment(plan_id, emp_id, d.isoformat(),

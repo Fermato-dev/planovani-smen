@@ -40,6 +40,7 @@
 {% set day_board = board.get(ds, {}) %}
 {% set day_absent = absent.get(ds, []) %}
 {% set day_unassigned = unassigned.get(ds, []) %}
+{% set day_unassigned_total = unassigned_totals.get(ds, 0) %}
 {% set day_avail = available.get(ds, {}) %}
 {% set editable = not holiday_map.get(ds) and not vacation_map.get(ds) %}
 
@@ -180,17 +181,30 @@
     {{ dept_section(expedice_depts) }}
     {% endif %}
 
-    {# ── Nepřiřazení ── #}
-    <div class="board-section-title mt-3">Nepřiřazení <span class="badge bg-secondary" style="font-size:.7rem;vertical-align:middle">{{ day_unassigned | length }}</span></div>
-    <div class="d-flex flex-wrap gap-1 mb-2">
-        {% if day_unassigned %}
-            {% for e in day_unassigned %}
-            <span class="board-unassigned-chip" style="border-left:3px solid #{{ e.color }}">{{ e.name }}</span>
-            {% endfor %}
-        {% else %}
+    {# ── Nepřiřazení – seskupení podle oddělení z plánu směn ── #}
+    <div class="board-section-title mt-3">Nepřiřazení <span class="badge bg-secondary" style="font-size:.7rem;vertical-align:middle">{{ day_unassigned_total }}</span></div>
+    {% if day_unassigned %}
+        {% for group in day_unassigned %}
+        <div class="mb-1">
+            {% if group.dept_name %}
+            <div style="font-size:.7rem;font-weight:600;color:var(--fm-text-muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px;">
+                {{ group.dept_name }}
+            </div>
+            {% else %}
+            <div style="font-size:.7rem;color:var(--fm-text-muted);margin-bottom:2px;font-style:italic">Bez oddělení</div>
+            {% endif %}
+            <div class="d-flex flex-wrap gap-1">
+                {% for e in group.employees %}
+                <span class="board-unassigned-chip" style="border-left:3px solid #{{ e.color }}">{{ e.name }}</span>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="d-flex flex-wrap gap-1 mb-2">
             <span class="text-muted" style="font-size:.8rem;font-style:italic">Všichni přiřazeni</span>
-        {% endif %}
-    </div>
+        </div>
+    {% endif %}
 
     {# ── Absence ── #}
     {% if day_absent %}

@@ -17,6 +17,7 @@ ABSENCE_TYPES = [
     ('osobni', 'Osobní volno'),
     ('nahradni', 'Náhradní volno'),
     ('jine', 'Jiné'),
+    ('svatek', 'Svátek 🎉'),
 ]
 
 
@@ -53,46 +54,10 @@ def create_or_get_plan(week_start):
     week_number = ws.isocalendar()[1]
     year = ws.isocalendar()[0]
     plan_id = create_plan(week_start, week_number, year)
-
-    # Auto-fill from default patterns (with random task rotation)
-    employees = get_all_employees(active_only=True)
     dates = get_week_dates(ws)
 
-    for emp in employees:
-        pattern = get_default_pattern(emp['id'])
-        task_rotation = _resolve_task_for_pattern(emp['id'], pattern, dates)
-        for p in pattern:
-            day_idx = p['day_of_week']
-            if day_idx < 7:
-                task_id = p['task_id'] or task_rotation.get(day_idx)
-                upsert_assignment(
-                    plan_id=plan_id,
-                    employee_id=emp['id'],
-                    date=dates[day_idx].isoformat(),
-                    shift_template_id=p['shift_template_id'],
-                    department_id=p['department_id'],
-                    task_id=task_id
-                )
-
-    # Auto-fill absences from constraints (overwrites default patterns via upsert)
-    week_end = dates[6].isoformat()
-    constraints = get_constraints_for_week(ws.isoformat(), week_end)
-    for c in constraints:
-        c_from = _parse_date(c['date_from'])
-        c_to = _parse_date(c['date_to'])
-        for d in dates:
-            if c_from <= d <= c_to:
-                upsert_assignment(
-                    plan_id=plan_id,
-                    employee_id=c['employee_id'],
-                    date=d.isoformat(),
-                    shift_template_id=None,
-                    department_id=None,
-                    task_id=None,
-                    is_absence=1,
-                    absence_type=c['type'],
-                    note=c['note'] or ''
-                )
+    # Use shared fill logic: patterns + holidays as svátek + constraints
+    _fill_patterns_and_constraints(plan_id, ws, dates)
 
     return plan_id, True
 
@@ -180,12 +145,14 @@ def _fill_patterns_and_constraints(plan_id, ws, dates):
 
     When a pattern has department but no task, a random qualified task is
     assigned so employees rotate through all positions they're qualified for.
-    Skips Czech public holidays.
+    Czech public holidays are filled as 'svátek' absence for all employees.
     """
     from app.utils.holidays import get_holidays_for_dates
     holiday_map = get_holidays_for_dates(dates)
 
     employees = get_all_employees(active_only=True)
+
+    # Pass 1: fill regular pattern days (skip holidays and non-work days)
     for emp in employees:
         pattern = get_default_pattern(emp['id'])
         # Resolve random tasks for dept-only patterns
@@ -195,7 +162,7 @@ def _fill_patterns_and_constraints(plan_id, ws, dates):
             if day_idx < 7:
                 d = dates[day_idx]
                 if d.isoformat() in holiday_map:
-                    continue  # Přeskočit svátek
+                    continue  # Will be filled as svátek in pass 2
                 if not employee_works_on_day(emp, d.weekday()):
                     continue  # Přeskočit den kdy zaměstnanec nepracuje
                 task_id = p['task_id'] or task_rotation.get(day_idx)
@@ -208,7 +175,25 @@ def _fill_patterns_and_constraints(plan_id, ws, dates):
                     task_id=task_id
                 )
 
-    # Auto-fill absences from constraints
+    # Pass 2: mark all holidays as svátek absence for ALL active employees
+    for d in dates:
+        ds = d.isoformat()
+        holiday_name = holiday_map.get(ds)
+        if holiday_name:
+            for emp in employees:
+                upsert_assignment(
+                    plan_id=plan_id,
+                    employee_id=emp['id'],
+                    date=ds,
+                    shift_template_id=None,
+                    department_id=None,
+                    task_id=None,
+                    is_absence=1,
+                    absence_type='svatek',
+                    note=holiday_name
+                )
+
+    # Pass 3: auto-fill absences from constraints (override svátek if needed)
     week_end = dates[6].isoformat()
     constraints = get_constraints_for_week(ws.isoformat(), week_end)
     for c in constraints:

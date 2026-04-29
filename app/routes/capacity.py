@@ -107,10 +107,14 @@ def board_view(week_start):
         absent = {d.isoformat(): [] for d in dates}
 
     # Unassigned: zaměstnanci bez jakéhokoliv přiřazení (ani k jedné práci) a bez absence
-    # board structure: {date: {dept_id: {task_id: {employees: [...]}}}}
+    # Grouped by their planner department so they appear "na kupě" per dept.
     try:
+        from app.db import get_db
+        from app.models.capacity import _emp_color
         all_emps = get_all_employees(active_only=True)
+        db = get_db()
         unassigned = {}
+        unassigned_totals = {}
         for d in dates:
             ds = d.isoformat()
             absent_ids = {e['employee_id'] for e in absent.get(ds, [])}
@@ -119,14 +123,58 @@ def board_view(week_start):
                 for task_data in dept_tasks.values():
                     for emp in task_data['employees']:
                         assigned_ids.add(emp['employee_id'])
-            from app.models.capacity import _emp_color
-            unassigned[ds] = [
-                {'employee_id': e['id'], 'name': e['name'], 'color': _emp_color(e['id'])}
+
+            # Get planner dept assignment for each employee this day
+            dept_rows = db.execute(
+                """SELECT a.employee_id, a.department_id, d.name as dept_name,
+                          COALESCE(d.work_plan, 1) as work_plan
+                   FROM assignments a
+                   LEFT JOIN departments d ON a.department_id = d.id
+                   WHERE a.plan_id = ? AND a.date = ? AND a.is_absence = 0""",
+                (plan_id, ds)
+            ).fetchall()
+            emp_planner_dept = {
+                r['employee_id']: {
+                    'dept_id': r['department_id'],
+                    'dept_name': r['dept_name'] or '',
+                    'work_plan': r['work_plan'],
+                }
+                for r in dept_rows
+            }
+
+            # Build flat list with dept info
+            flat = [
+                {
+                    'employee_id': e['id'],
+                    'name': e['name'],
+                    'color': _emp_color(e['id']),
+                    'planner_dept_id': emp_planner_dept.get(e['id'], {}).get('dept_id'),
+                    'planner_dept_name': emp_planner_dept.get(e['id'], {}).get('dept_name', ''),
+                    'planner_work_plan': emp_planner_dept.get(e['id'], {}).get('work_plan', 1),
+                }
                 for e in all_emps
                 if e['id'] not in assigned_ids
                 and e['id'] not in absent_ids
                 and employee_works_on_day(e, d.weekday())
             ]
+            unassigned_totals[ds] = len(flat)
+
+            # Group by department: výroba first, expedice second, no-dept last
+            groups = {}
+            for e in flat:
+                did = e['planner_dept_id']
+                if did not in groups:
+                    groups[did] = {
+                        'dept_id': did,
+                        'dept_name': e['planner_dept_name'],
+                        'work_plan': e['planner_work_plan'],
+                        'employees': [],
+                    }
+                groups[did]['employees'].append(e)
+            unassigned[ds] = sorted(
+                groups.values(),
+                key=lambda g: (2 if g['dept_id'] is None else (0 if g['work_plan'] else 1), g['dept_name'])
+            )
     except Exception:
         logger.exception("board_view: chyba při výpočtu nepřiřazených")
         raise
@@ -153,6 +201,7 @@ def board_view(week_start):
         board=board,
         absent=absent,
         unassigned=unassigned,
+        unassigned_totals=unassigned_totals,
         available=available,
         holiday_map=holiday_map,
         vacation_map=vacation_map,
