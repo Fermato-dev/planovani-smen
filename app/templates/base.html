@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Přehled{% endblock %} | FerMato</title>
+    <title>{% block title %}Planovani smen{% endblock %} | FerMato</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -13,149 +13,101 @@
     {% block extra_css %}{% endblock %}
 </head>
 <body>
-<div class="app-layout">
-
-    <!-- Mobile topbar -->
-    <div class="mobile-topbar">
-        <button class="hamburger-btn" onclick="toggleSidebar()" aria-label="Menu">
-            <i class="bi bi-list"></i>
-        </button>
-        <span class="mobile-topbar-brand">FERMATO</span>
-    </div>
-
-    <!-- Sidebar overlay (mobile) -->
-    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
-
-    <!-- Sidebar -->
-    <aside class="sidebar" id="sidebar">
-        <div class="sidebar-brand">
-            <span class="sidebar-brand-name">FERMATO</span>
-            <span class="sidebar-brand-sub">Plánování směn</span>
+    <div class="app-layout">
+        <div class="mobile-topbar">
+            <button class="hamburger-btn" onclick="toggleSidebar()" aria-label="Menu">
+                <i class="bi bi-list"></i>
+            </button>
+            <span class="mobile-topbar-brand">FerMato Smeny</span>
         </div>
-        <nav class="sidebar-nav">
-            <div class="sidebar-section-label">Hlavní</div>
-            <a class="sidebar-nav-item {% if request.endpoint and request.endpoint.startswith('dashboard') %}active{% endif %}"
-               href="{{ url_for('dashboard.index') }}">
-                <i class="bi bi-house-door"></i> Přehled
-            </a>
-            <a class="sidebar-nav-item {% if request.endpoint and request.endpoint.startswith('planner') %}active{% endif %}"
-               href="{{ url_for('planner.index') }}">
-                <i class="bi bi-calendar3-week"></i> Plánování
-            </a>
-            <a class="sidebar-nav-item {% if request.endpoint and request.endpoint.startswith('employees') %}active{% endif %}"
-               href="{{ url_for('employees.index') }}">
-                <i class="bi bi-people"></i> Zaměstnanci
-            </a>
-            <div class="sidebar-section-label">Správa</div>
-            <a class="sidebar-nav-item {% if request.endpoint and request.endpoint.startswith('constraints') %}active{% endif %}"
-               href="{{ url_for('constraints.index') }}">
-                <i class="bi bi-calendar-x"></i> Absence
-            </a>
-            <a class="sidebar-nav-item {% if request.endpoint and request.endpoint.startswith('settings') %}active{% endif %}"
-               href="{{ url_for('settings.index') }}">
-                <i class="bi bi-gear"></i> Nastavení
-            </a>
-            <a class="sidebar-nav-item {% if request.endpoint and request.endpoint.startswith('import_csv') %}active{% endif %}"
-               href="{{ url_for('import_csv.index') }}">
-                <i class="bi bi-upload"></i> Import
-            </a>
-        </nav>
-        <div class="sidebar-footer">
-            <div class="dropdown">
-                <button class="sidebar-user-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    <div class="sidebar-user-avatar"><i class="bi bi-person"></i></div>
-                    <span class="sidebar-user-name">{{ current_user.display_name }}</span>
-                    <i class="bi bi-chevron-expand"></i>
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end">
-                    <li><a class="dropdown-item" href="{{ url_for('auth.change_password') }}">
-                        <i class="bi bi-key me-2"></i>Změna hesla</a></li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li>
-                        <form method="POST" action="{{ url_for('auth.logout') }}" class="d-inline">
-                            <button type="submit" class="dropdown-item">
-                                <i class="bi bi-box-arrow-right me-2"></i>Odhlásit se
-                            </button>
-                        </form>
-                    </li>
-                </ul>
+        <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-brand">
+                <div class="sidebar-brand-icon"><i class="bi bi-calendar3"></i></div>
+                <div class="sidebar-brand-text">FerMato Smeny<small>Planovani smen</small></div>
             </div>
-        </div>
-    </aside>
-
-    <!-- Main content -->
-    <main class="main-content">
-        <!-- Sticky content topbar -->
-        <div class="content-topbar">
-            <div class="content-topbar-title">
-                {% if request.endpoint and request.endpoint.startswith('dashboard') %}
-                    <i class="bi bi-house-door"></i> Přehled
-                {% elif request.endpoint and request.endpoint.startswith('planner') %}
-                    <i class="bi bi-calendar3-week"></i> Plánování
-                {% elif request.endpoint and request.endpoint.startswith('employees') %}
-                    <i class="bi bi-people"></i> Zaměstnanci
-                {% elif request.endpoint and request.endpoint.startswith('constraints') %}
+            <nav class="sidebar-nav">
+                <div class="sidebar-section-label">Hlavni</div>
+                <a class="sidebar-nav-item {% if request.endpoint and request.endpoint.startswith('dashboard') %}active{% endif %}" href="{{ url_for('dashboard.index') }}">
+                    <i class="bi bi-house-door"></i> Prehled
+                </a>
+                <a class="sidebar-nav-item {% if request.endpoint and request.endpoint.startswith('planner') %}active{% endif %}" href="{{ url_for('planner.index') }}">
+                    <i class="bi bi-table"></i> Planovac
+                </a>
+                <a class="sidebar-nav-item {% if request.endpoint and request.endpoint.startswith('employees') %}active{% endif %}" href="{{ url_for('employees.index') }}">
+                    <i class="bi bi-people"></i> Zamestnanci
+                </a>
+                <div class="sidebar-section-label">Sprava</div>
+                <a class="sidebar-nav-item {% if request.endpoint and request.endpoint.startswith('constraints') %}active{% endif %}" href="{{ url_for('constraints.index') }}">
                     <i class="bi bi-calendar-x"></i> Absence
-                {% elif request.endpoint and request.endpoint.startswith('settings') %}
-                    <i class="bi bi-gear"></i> Nastavení
-                {% elif request.endpoint and request.endpoint.startswith('import_csv') %}
+                </a>
+                <a class="sidebar-nav-item {% if request.endpoint and request.endpoint.startswith('settings') %}active{% endif %}" href="{{ url_for('settings.index') }}">
+                    <i class="bi bi-gear"></i> Nastaveni
+                </a>
+                <a class="sidebar-nav-item {% if request.endpoint and request.endpoint.startswith('import_csv') %}active{% endif %}" href="{{ url_for('import_csv.index') }}">
                     <i class="bi bi-upload"></i> Import
-                {% else %}
-                    <i class="bi bi-grid"></i> FerMato
-                {% endif %}
-                {% block topbar_subtitle %}{% endblock %}
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="dropdown">
+                    <button class="sidebar-user-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <div class="sidebar-user-avatar"><i class="bi bi-person"></i></div>
+                        <span class="sidebar-user-name">{{ current_user.display_name }}</span>
+                        <i class="bi bi-chevron-expand"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="{{ url_for('auth.change_password') }}"><i class="bi bi-key me-2"></i>Zmena hesla</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <form method="POST" action="{{ url_for('auth.logout') }}" class="d-inline">
+                                <button type="submit" class="dropdown-item"><i class="bi bi-box-arrow-right me-2"></i>Odhlasit se</button>
+                            </form>
+                        </li>
+                    </ul>
+                </div>
             </div>
-            <div class="content-topbar-actions">
-                {% block topbar_actions %}{% endblock %}
-            </div>
-        </div>
-
-        <!-- Page content -->
-        <div class="content-body">
+        </aside>
+        <main class="main-content">
             {% block content %}{% endblock %}
-        </div>
-    </main>
-</div>
-
-<!-- Toast notifications -->
-<div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1090;">
-    {% with messages = get_flashed_messages(with_categories=true) %}
-    {% for category, message in messages %}
-    <div class="toast align-items-center text-bg-{{ 'danger' if category == 'error' else 'success' if category == 'success' else 'primary' }} border-0"
-         role="alert" aria-live="assertive" aria-atomic="true"
-         data-bs-autohide="true" data-bs-delay="3500">
-        <div class="d-flex">
-            <div class="toast-body">
-                <i class="bi bi-{{ 'x-circle' if category == 'error' else 'check-circle' if category == 'success' else 'info-circle' }} me-1"></i>
-                {{ message }}
-            </div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-        </div>
+        </main>
     </div>
-    {% endfor %}
-    {% endwith %}
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://unpkg.com/htmx.org@2.0.4"></script>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.toast-container .toast').forEach(function(el) {
-        new bootstrap.Toast(el).show();
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1090;">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+        <div class="toast align-items-center text-bg-{{ 'danger' if category == 'error' else 'success' if category == 'success' else 'primary' }} border-0"
+             role="alert" aria-live="assertive" aria-atomic="true"
+             data-bs-autohide="true" data-bs-delay="3500">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="bi bi-{{ 'x-circle' if category == 'error' else 'check-circle' if category == 'success' else 'info-circle' }} me-1"></i>
+                    {{ message }}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+        {% endfor %}
+        {% endwith %}
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.toast-container .toast').forEach(function(el) {
+            new bootstrap.Toast(el).show();
+        });
     });
-});
-document.body.addEventListener('htmx:responseError', function(evt) {
-    if (evt.detail.xhr.status === 401) {
-        window.location.href = '/auth/login';
+    document.body.addEventListener('htmx:responseError', function(evt) {
+        if (evt.detail.xhr.status === 401) {
+            window.location.href = '/auth/login';
+        }
+    });
+    function toggleSidebar() {
+        var sidebar = document.getElementById('sidebar');
+        var overlay = document.getElementById('sidebarOverlay');
+        sidebar.classList.toggle('open');
+        overlay.classList.toggle('show');
     }
-});
-function toggleSidebar() {
-    var sidebar = document.getElementById('sidebar');
-    var overlay = document.getElementById('sidebarOverlay');
-    sidebar.classList.toggle('open');
-    overlay.classList.toggle('show');
-}
-</script>
-{% block extra_js %}{% endblock %}
+    </script>
+    {% block extra_js %}{% endblock %}
 </body>
 </html>
