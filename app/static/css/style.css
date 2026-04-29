@@ -194,6 +194,34 @@ a:hover { color: var(--fm-primary-dim); }
 .absence-jine { background: var(--fm-abs-jine-bg); color: var(--fm-abs-jine); }
 .partial-work-label { display: block; font-size: 0.65rem; color: var(--fm-text-muted); margin-top: 2px; font-style: italic; }
 
+/* ─── Svátky a celozávodní dovolená ─────────────────────────── */
+.col-holiday { background: rgba(251,191,36,0.10) !important; }
+.col-vacation { background: rgba(99,102,241,0.07) !important; }
+.holiday-label {
+    display: block;
+    font-size: 0.62rem;
+    font-weight: 700;
+    color: #B45309;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 110px;
+}
+.vacation-label {
+    display: block;
+    font-size: 0.62rem;
+    font-weight: 700;
+    color: #4338CA;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 110px;
+}
+.absence-svatek     { background: rgba(251,191,36,0.18); color: #92400E; }
+.absence-celozavodni { background: rgba(99,102,241,0.12); color: #3730A3; }
+
 .nav-tabs { border-bottom-color: var(--fm-border-light); }
 .nav-tabs .nav-link { color: var(--fm-text-muted) !important; border: none; border-bottom: 2px solid transparent; border-radius: 0; font-size: 0.82rem; font-weight: 500; padding: 0.6rem 1rem !important; transition: all var(--fm-transition); }
 .nav-tabs .nav-link:hover { color: var(--fm-text) !important; border-bottom-color: var(--fm-text-muted); background: none; }

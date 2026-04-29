@@ -145,6 +145,18 @@ def _migrate_db(db):
     """)
     db.commit()
 
+    # Celozávodní dovolená
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS company_vacations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL DEFAULT '',
+            date_from DATE NOT NULL,
+            date_to DATE NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    db.commit()
+
     # Auto-create default admin if no users exist
     user_count = db.execute("SELECT COUNT(*) FROM users").fetchone()[0]
     if user_count == 0:

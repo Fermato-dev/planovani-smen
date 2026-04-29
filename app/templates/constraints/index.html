@@ -4,15 +4,188 @@
 {% block content %}
 <div class="page-header">
     <h1><i class="bi bi-calendar-x"></i> Omezení a absence</h1>
+    {% if active_tab == 'celozavodni' %}
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addVacModal">
+        <i class="bi bi-plus-lg"></i> Přidat celozávodní dovolenou
+    </button>
+    {% else %}
     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addModal">
         <i class="bi bi-plus-lg"></i> Přidat omezení
     </button>
+    {% endif %}
 </div>
+
+<!-- Tabs -->
+<ul class="nav nav-tabs mb-3">
+    <li class="nav-item">
+        <a class="nav-link {% if active_tab != 'celozavodni' %}active{% endif %}"
+           href="{{ url_for('constraints.index', tab='absence') }}">
+            <i class="bi bi-calendar-x me-1"></i> Absence zaměstnanců
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if active_tab == 'celozavodni' %}active{% endif %}"
+           href="{{ url_for('constraints.index', tab='celozavodni') }}">
+            <i class="bi bi-building me-1"></i> Celozávodní dovolená
+            {% if company_vacations %}
+            <span class="badge bg-secondary ms-1">{{ company_vacations|length }}</span>
+            {% endif %}
+        </a>
+    </li>
+</ul>
+
+{% if active_tab == 'celozavodni' %}
+<!-- ══════════════ CELOZÁVODNÍ DOVOLENÁ ══════════════ -->
+<div class="card">
+    <div class="card-body p-0">
+        {% if company_vacations %}
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Název</th>
+                    <th>Od</th>
+                    <th>Do</th>
+                    <th>Počet dní</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for vac in company_vacations %}
+                <tr>
+                    <td class="fw-semibold">
+                        <i class="bi bi-building text-muted me-1"></i>{{ vac.name }}
+                    </td>
+                    <td>{{ vac.date_from }}</td>
+                    <td>{{ vac.date_to }}</td>
+                    <td class="text-muted">
+                        {% set d_from = vac.date_from.split('-') %}
+                        {% set d_to   = vac.date_to.split('-') %}
+                        <small>
+                            <i class="bi bi-calendar3"></i>
+                        </small>
+                    </td>
+                    <td class="text-end">
+                        <button class="btn btn-action btn-outline-secondary"
+                                data-bs-toggle="modal"
+                                data-bs-target="#editVacModal{{ vac.id }}">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <form method="POST"
+                              action="{{ url_for('constraints.delete_company_vacation_route', vac_id=vac.id) }}"
+                              class="d-inline"
+                              onsubmit="return confirm('Smazat celozávodní dovolenou „{{ vac.name }}"?')">
+                            <button class="btn btn-action btn-outline-danger">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <i class="bi bi-building d-block"></i>
+            <h5>Žádná celozávodní dovolená</h5>
+            <p class="text-muted">
+                Přidejte termíny celozávodní dovolené — zobrazí se v plánovači.
+            </p>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addVacModal">
+                <i class="bi bi-plus-lg"></i> Přidat celozávodní dovolenou
+            </button>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Add Company Vacation Modal -->
+<div class="modal fade" id="addVacModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('constraints.add_company_vacation') }}">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-building me-1"></i> Přidat celozávodní dovolenou
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Název *</label>
+                        <input type="text" name="name" class="form-control" required
+                               placeholder="např. Letní celozávodní 2026">
+                    </div>
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <label class="form-label">Od *</label>
+                            <input type="date" name="date_from" class="form-control" required>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <label class="form-label">Do *</label>
+                            <input type="date" name="date_to" class="form-control" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Zrušit</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-lg"></i> Uložit
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Company Vacation Modals -->
+{% for vac in company_vacations %}
+<div class="modal fade" id="editVacModal{{ vac.id }}" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('constraints.edit_company_vacation', vac_id=vac.id) }}">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-pencil me-1"></i> Upravit celozávodní dovolenou</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Název *</label>
+                        <input type="text" name="name" class="form-control"
+                               value="{{ vac.name }}" required>
+                    </div>
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <label class="form-label">Od *</label>
+                            <input type="date" name="date_from" class="form-control"
+                                   value="{{ vac.date_from }}" required>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <label class="form-label">Do *</label>
+                            <input type="date" name="date_to" class="form-control"
+                                   value="{{ vac.date_to }}" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Zrušit</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-lg"></i> Uložit
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+{% else %}
+<!-- ══════════════ ABSENCE ZAMĚSTNANCŮ ══════════════ -->
 
 <!-- Filter -->
 <div class="card mb-3">
     <div class="card-body py-2">
         <form method="GET" class="d-flex align-items-center gap-2">
+            <input type="hidden" name="tab" value="absence">
             <label class="form-label mb-0 text-muted" style="font-size:0.85rem;">Filtr:</label>
             <select name="employee_id" class="form-select form-select-sm" style="max-width:250px;"
                     onchange="this.form.submit()">
@@ -100,7 +273,7 @@
     </div>
 </div>
 
-<!-- Add Modal -->
+<!-- Add Constraint Modal -->
 <div class="modal fade" id="addModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -153,7 +326,7 @@
     </div>
 </div>
 
-<!-- Edit Modals (one per constraint) -->
+<!-- Edit Constraint Modals -->
 {% for c in constraints %}
 <div class="modal fade" id="editModal{{ c.id }}" tabindex="-1">
     <div class="modal-dialog">
@@ -211,4 +384,5 @@
 </div>
 {% endfor %}
 
+{% endif %}{# end tab #}
 {% endblock %}

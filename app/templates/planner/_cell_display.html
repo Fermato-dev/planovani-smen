@@ -1,5 +1,8 @@
 {# Single cell display - used for initial render and HTMX updates #}
-{% set absence_labels = {'dovolena': 'Dovolená', 'nemoc': 'Nemoc', 'lekar': 'Lékař', 'osobni': 'Osobní', 'nahradni': 'Náhr. volno', 'jine': 'Jiné'} %}
+{% set absence_labels = {'dovolena': 'Dovolená', 'nemoc': 'Nemoc', 'lekar': 'Lékař', 'osobni': 'Osobní', 'nahradni': 'Náhr. volno', 'jine': 'Jiné', 'svatek': 'Svátek', 'celozavodni': 'Cel. dovolená'} %}
+{# holiday_name and vacation_name are optionally passed via with block #}
+{% set _holiday = holiday_name if holiday_name is defined else '' %}
+{% set _vacation = vacation_name if vacation_name is defined else '' %}
 <span class="cell-spinner"><i class="bi bi-arrow-repeat spin"></i></span>
 <div class="plan-cell"
      hx-get="{{ url_for('planner.edit_cell', plan_id=plan_id, emp_id=emp_id, cell_date=cell_date) }}"
@@ -35,6 +38,16 @@
             {% if a.note %}<small class="cell-note">{{ a.note }}</small>{% endif %}
         {% endif %}
     {% else %}
-        <span class="empty-cell">+</span>
+        {% if _holiday %}
+            <span class="absence-badge absence-svatek">
+                <i class="bi bi-star-fill me-1" style="font-size:0.65rem;"></i>Svátek
+            </span>
+        {% elif _vacation %}
+            <span class="absence-badge absence-celozavodni">
+                <i class="bi bi-building me-1" style="font-size:0.65rem;"></i>Cel. dovolená
+            </span>
+        {% else %}
+            <span class="empty-cell">+</span>
+        {% endif %}
     {% endif %}
 </div>

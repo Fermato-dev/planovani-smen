@@ -10,6 +10,8 @@ from app.models.day_requirement import (
     save_day_requirements, clear_day_requirements
 )
 from app.models.work_plan import has_entries_map
+from app.models.company_vacation import get_company_vacations_for_week, get_vacation_days_map
+from app.utils.holidays import get_holidays_for_dates
 from app.models.employee import get_employee
 from app.models.department import get_all_departments, get_tasks_for_department
 from app.models.shift import get_all_shifts
@@ -123,6 +125,11 @@ def week_view(week_start):
     next_week_year = next_ws_date.year
     next_week_dates = get_week_dates(next_ws_date.isoformat())
 
+    # Svátky a celozávodní dovolená
+    holiday_map = get_holidays_for_dates(dates)
+    vacation_days_map = get_vacation_days_map(dates)
+    company_vacations = get_company_vacations_for_week(dates)
+
     return render_template('planner/week.html',
                            plan=plan, grid=grid, dates=dates,
                            summary=summary, task_summary=task_summary,
@@ -144,7 +151,10 @@ def week_view(week_start):
                            nearby_weeks=nearby_weeks,
                            next_week_number=next_week_number,
                            next_week_year=next_week_year,
-                           next_week_dates=next_week_dates)
+                           next_week_dates=next_week_dates,
+                           holiday_map=holiday_map,
+                           vacation_days_map=vacation_days_map,
+                           company_vacations=company_vacations)
 
 
 @bp.route('/cell/<int:plan_id>/<int:emp_id>/<cell_date>', methods=['GET'])

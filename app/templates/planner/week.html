@@ -298,6 +298,21 @@
     </div>
 </div>
 
+<!-- Celozávodní dovolená banner -->
+{% if company_vacations %}
+<div class="alert alert-warning py-2 px-3 mb-2 d-flex align-items-center gap-2" style="font-size:0.85rem;">
+    <i class="bi bi-building fs-5 flex-shrink-0"></i>
+    <div>
+        <strong>Celozávodní dovolená</strong> v tomto týdnu:
+        {% for vac in company_vacations %}
+        <span class="ms-1">{{ vac.name }}
+            <span class="text-muted">({{ vac.date_from }} – {{ vac.date_to }})</span>{% if not loop.last %},{% endif %}
+        </span>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
 <!-- Planner Grid -->
 <div class="card">
     <div class="card-body p-2 planner-grid" id="plannerGrid">
@@ -306,9 +321,17 @@
                 <tr>
                     <th class="emp-name">Zaměstnanec</th>
                     {% for i in range(7) %}
-                    <th class="day-col {{ 'col-weekend' if dates[i].weekday() >= 5 }}">
+                    {% set day_iso = dates[i].isoformat() %}
+                    {% set is_holiday = day_iso in holiday_map %}
+                    {% set is_vacation = day_iso in vacation_days_map %}
+                    <th class="day-col {{ 'col-weekend' if dates[i].weekday() >= 5 }} {{ 'col-holiday' if is_holiday }} {{ 'col-vacation' if is_vacation and not is_holiday }}">
                         <div>
                             {{ day_names[i] }}
+                            {% if is_holiday %}
+                            <span class="holiday-label">{{ holiday_map[day_iso] }}</span>
+                            {% elif is_vacation %}
+                            <span class="vacation-label">{{ vacation_days_map[day_iso] }}</span>
+                            {% endif %}
                             {# Tlačítko "Potřeby dne" #}
                             <button type="button"
                                     class="btn btn-req-day {% if req_map.get(dates[i].isoformat()) %}btn-req-active{% endif %}"
@@ -370,7 +393,9 @@
                              id="cell-{{ row.employee.id }}-{{ day.date_str }}">
                             <span class="cell-spinner"><i class="bi bi-arrow-repeat spin"></i></span>
                             {% set a = day.assignment %}
-                            {% with plan_id=plan.id, emp_id=row.employee.id, cell_date=day.date_str %}
+                            {% with plan_id=plan.id, emp_id=row.employee.id, cell_date=day.date_str,
+                                    holiday_name=holiday_map.get(day.date_str, ''),
+                                    vacation_name=vacation_days_map.get(day.date_str, '') %}
                                 {% include 'planner/_cell_display.html' %}
                             {% endwith %}
                         </div>
