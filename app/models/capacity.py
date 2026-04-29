@@ -188,6 +188,36 @@ def _emp_color(emp_id):
     return _BOARD_EMP_COLORS[(int(emp_id) - 1) % len(_BOARD_EMP_COLORS)]
 
 
+def sync_board_from_planner(plan_id, dates):
+    """Přetáhne existující přiřazení z plánu směn (assignments.task_id) do board struktur.
+    Idempotentní — INSERT OR IGNORE, bezpečné volat při každém načtení boardu.
+    """
+    db = get_db()
+    date_strs = [d.isoformat() for d in dates]
+    ph = ','.join('?' for _ in dates)
+
+    rows = db.execute(
+        f"""SELECT a.id as assignment_id, a.task_id, CAST(a.date AS TEXT) as ds
+            FROM assignments a
+            WHERE a.plan_id = ? AND a.is_absence = 0
+              AND a.task_id IS NOT NULL
+              AND a.date IN ({ph})""",
+        [plan_id] + date_strs
+    ).fetchall()
+
+    for r in rows:
+        db.execute(
+            "INSERT OR IGNORE INTO board_day_tasks (plan_id, date, task_id) VALUES (?,?,?)",
+            (plan_id, r['ds'], r['task_id'])
+        )
+        db.execute(
+            "INSERT OR IGNORE INTO board_task_assignments (assignment_id, task_id) VALUES (?,?)",
+            (r['assignment_id'], r['task_id'])
+        )
+    if rows:
+        db.commit()
+
+
 def get_board_assignments(plan_id, dates):
     """Task-centric board s dynamickým seznamem prací per den.
     Vrátí {date_str: {dept_id: {task_id: {

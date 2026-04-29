@@ -9,6 +9,7 @@ from app.models.capacity import (
     add_special_task, delete_entry, get_available_per_day,
     get_planner_counts,
     get_or_find_plan, create_plan_for_week,
+    sync_board_from_planner,
     get_board_assignments, get_absent_employees_for_dates,
     board_unassign_employee,
     board_assign_to_task, board_remove_task,
@@ -84,6 +85,12 @@ def board_view(week_start):
     except Exception:
         logger.exception("board_view: chyba při načítání oddělení")
         raise
+
+    # Synchronizace z plánu směn — přetáhne assignments.task_id do board struktur
+    try:
+        sync_board_from_planner(plan_id, dates)
+    except Exception:
+        logger.exception("board_view: chyba při sync_board_from_planner")
 
     # Board assignments
     try:
