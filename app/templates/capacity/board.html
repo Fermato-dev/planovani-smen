@@ -56,6 +56,16 @@
         {% set expedice_count.n = expedice_count.n + (td.employees | length) %}
     {% endfor %}
 {% endfor %}
+{# Počty nepřiřazených podle kategorie (výroba/expedice) #}
+{% set vyroba_avail = namespace(n=0) %}
+{% set expedice_avail = namespace(n=0) %}
+{% for group in day_unassigned %}
+    {% if group.dept_id and group.work_plan == 1 %}
+        {% set vyroba_avail.n = vyroba_avail.n + (group.employees | length) %}
+    {% elif group.dept_id is not none and group.work_plan == 0 %}
+        {% set expedice_avail.n = expedice_avail.n + (group.employees | length) %}
+    {% endif %}
+{% endfor %}
 
 <div class="tab-pane fade {% if is_active %}show active{% endif %}" id="tab-{{ ds }}" role="tabpanel">
 <div class="card mb-3">
@@ -73,8 +83,18 @@
         <div class="board-summary-badge">👥 <span class="num">{{ day_avail.total or 0 }}</span> celkem</div>
         <div class="board-summary-badge">🏥 <span class="num">{{ day_absent | length }}</span> absence</div>
         <div class="board-summary-badge">✅ <span class="num">{{ day_avail.available | int if day_avail.available is defined else 0 }}</span> dostupných</div>
-        {% if vyroba_depts %}<div class="board-summary-badge">🏭 Výroba: <span class="num ms-1">{{ vyroba_count.n }}</span></div>{% endif %}
-        {% if expedice_depts %}<div class="board-summary-badge">📦 Expedice: <span class="num ms-1">{{ expedice_count.n }}</span></div>{% endif %}
+        {% if vyroba_depts %}
+        <div class="board-summary-badge">
+            🏭 Výroba:&nbsp;<span class="num">{{ vyroba_avail.n + vyroba_count.n }}</span>
+            <span class="badge-detail">{{ vyroba_avail.n }} volní&nbsp;/&nbsp;{{ vyroba_count.n }} napl</span>
+        </div>
+        {% endif %}
+        {% if expedice_depts %}
+        <div class="board-summary-badge">
+            📦 Expedice:&nbsp;<span class="num">{{ expedice_avail.n + expedice_count.n }}</span>
+            <span class="badge-detail">{{ expedice_avail.n }} volní&nbsp;/&nbsp;{{ expedice_count.n }} napl</span>
+        </div>
+        {% endif %}
     </div>
 
     {# ── MAKRO: sekce oddělení ── #}

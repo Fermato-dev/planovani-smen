@@ -385,6 +385,7 @@ dd { color: var(--fm-text); margin-bottom: 0.75rem; }
   padding: 0.3rem 0.7rem; font-size: 0.85rem; font-weight: 500;
 }
 .board-summary-badge .num { font-size: 1.1rem; font-weight: 700; }
+.board-summary-badge .badge-detail { font-size: 0.72rem; color: #6c757d; margin-left: 0.3rem; font-weight: 400; }
 .board-section-title {
   font-size: 0.68rem; font-weight: 700; letter-spacing: .08em;
   text-transform: uppercase; color: #6c757d; margin: 0.6rem 0 0.25rem;
