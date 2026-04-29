@@ -63,14 +63,18 @@
     {% set day_unassigned = unassigned.get(ds, []) %}
     {% set day_avail = available.get(ds, {}) %}
 
-    {# Compute assigned counts per section #}
+    {# Compute assigned counts per section (each employee counted once due to UNIQUE constraint) #}
     {% set vyroba_count = namespace(n=0) %}
     {% set expedice_count = namespace(n=0) %}
     {% for dept in vyroba_depts %}
-        {% set vyroba_count.n = vyroba_count.n + (day_board.get(dept.id, []) | length) %}
+        {% for task_assigns in day_board.get(dept.id, {}).values() %}
+            {% set vyroba_count.n = vyroba_count.n + (task_assigns | length) %}
+        {% endfor %}
     {% endfor %}
     {% for dept in expedice_depts %}
-        {% set expedice_count.n = expedice_count.n + (day_board.get(dept.id, []) | length) %}
+        {% for task_assigns in day_board.get(dept.id, {}).values() %}
+            {% set expedice_count.n = expedice_count.n + (task_assigns | length) %}
+        {% endfor %}
     {% endfor %}
 
     <div class="tab-pane fade {% if is_active %}show active{% endif %}"
@@ -118,17 +122,25 @@
                 {% if vyroba_depts %}
                 <div class="board-section-title">🏭 Výroba</div>
                 {% for dept in vyroba_depts %}
-                <div class="board-dept-row">
-                    <span class="board-dept-label">
-                        <span class="dept-badge-sm" style="background:#{{ dept.color }}">{{ dept.name }}</span>
-                        {% if dept['full_name'] and dept['full_name'] != dept['name'] %}
-                        <small class="text-muted ms-1" style="font-size:0.72rem;">{{ dept['full_name'] }}</small>
-                        {% endif %}
-                    </span>
-                    <div class="flex-grow-1 d-flex flex-wrap align-items-center gap-1">
-                        {% set dept_assignments = day_board.get(dept.id, []) %}
-                        {% if dept_assignments %}
-                            {% for a in dept_assignments %}
+                {% set dept_tasks = tasks_by_dept.get(dept.id, []) %}
+                {% set dept_board = day_board.get(dept.id, {}) %}
+
+                {# Dept header #}
+                <div class="board-dept-header-row">
+                    <span class="dept-badge-sm" style="background:#{{ dept.color }}">{{ dept.name }}</span>
+                    {% if dept['full_name'] and dept['full_name'] != dept['name'] %}
+                    <small class="text-muted ms-1" style="font-size:0.72rem;">{{ dept['full_name'] }}</small>
+                    {% endif %}
+                </div>
+
+                {% if dept_tasks %}
+                    {# Task rows #}
+                    {% for task in dept_tasks %}
+                    {% set task_assignments = dept_board.get(task.id, []) %}
+                    <div class="board-task-row">
+                        <span class="board-task-label">{{ task.name }}</span>
+                        <div class="flex-grow-1 d-flex flex-wrap align-items-center gap-1">
+                            {% for a in task_assignments %}
                             <form method="POST" action="{{ url_for('capacity.board_unassign', assignment_id=a.assignment_id) }}" class="d-inline m-0">
                                 <input type="hidden" name="week_start" value="{{ week_start }}">
                                 <span class="board-emp-card" style="background:#{{ a.color }}">
@@ -136,19 +148,63 @@
                                 </span>
                             </form>
                             {% endfor %}
-                        {% else %}
-                            <span class="text-muted" style="font-size:0.78rem;font-style:italic;">(nikdo)</span>
-                        {% endif %}
-                        {% if not holiday_map.get(ds) and not vacation_map.get(ds) %}
-                        <button class="board-add-btn"
-                            hx-get="{{ url_for('capacity.board_add_panel', week_start=week_start, date_str=ds, dept_id=dept.id) }}"
-                            hx-target="#add-panel-{{ ds }}-{{ dept.id }}"
-                            hx-swap="innerHTML"
-                            title="Přiřadit zaměstnance">+</button>
-                        {% endif %}
+                            {% if not holiday_map.get(ds) and not vacation_map.get(ds) %}
+                            <button class="board-add-btn"
+                                hx-get="{{ url_for('capacity.board_add_panel', week_start=week_start, date_str=ds, dept_id=dept.id, task_id=task.id) }}"
+                                hx-target="#add-panel-{{ ds }}-{{ dept.id }}-{{ task.id }}"
+                                hx-swap="innerHTML"
+                                title="Přiřadit zaměstnance">+</button>
+                            {% endif %}
+                        </div>
                     </div>
-                </div>
-                <div id="add-panel-{{ ds }}-{{ dept.id }}"></div>
+                    <div id="add-panel-{{ ds }}-{{ dept.id }}-{{ task.id }}"></div>
+                    {% endfor %}
+
+                    {# Dept-level (no task) assignments if any #}
+                    {% set no_task = dept_board.get(none, []) %}
+                    {% if no_task %}
+                    <div class="board-task-row">
+                        <span class="board-task-label text-muted" style="font-style:italic;">ostatní</span>
+                        <div class="flex-grow-1 d-flex flex-wrap align-items-center gap-1">
+                            {% for a in no_task %}
+                            <form method="POST" action="{{ url_for('capacity.board_unassign', assignment_id=a.assignment_id) }}" class="d-inline m-0">
+                                <input type="hidden" name="week_start" value="{{ week_start }}">
+                                <span class="board-emp-card" style="background:#{{ a.color }}">
+                                    {{ a.name }}<button type="submit" class="board-remove-btn" title="Odebrat">&times;</button>
+                                </span>
+                            </form>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                {% else %}
+                    {# Dept without tasks – single row #}
+                    <div class="board-dept-row">
+                        <div class="flex-grow-1 d-flex flex-wrap align-items-center gap-1">
+                            {% set no_task = dept_board.get(none, []) %}
+                            {% for a in no_task %}
+                            <form method="POST" action="{{ url_for('capacity.board_unassign', assignment_id=a.assignment_id) }}" class="d-inline m-0">
+                                <input type="hidden" name="week_start" value="{{ week_start }}">
+                                <span class="board-emp-card" style="background:#{{ a.color }}">
+                                    {{ a.name }}<button type="submit" class="board-remove-btn" title="Odebrat">&times;</button>
+                                </span>
+                            </form>
+                            {% endfor %}
+                            {% if not no_task %}
+                            <span class="text-muted" style="font-size:0.78rem;font-style:italic;">(nikdo)</span>
+                            {% endif %}
+                            {% if not holiday_map.get(ds) and not vacation_map.get(ds) %}
+                            <button class="board-add-btn"
+                                hx-get="{{ url_for('capacity.board_add_panel', week_start=week_start, date_str=ds, dept_id=dept.id, task_id=0) }}"
+                                hx-target="#add-panel-{{ ds }}-{{ dept.id }}-0"
+                                hx-swap="innerHTML"
+                                title="Přiřadit zaměstnance">+</button>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div id="add-panel-{{ ds }}-{{ dept.id }}-0"></div>
+                {% endif %}
                 {% endfor %}
                 {% endif %}
 
@@ -156,17 +212,23 @@
                 {% if expedice_depts %}
                 <div class="board-section-title mt-2">📦 Expedice / sklad</div>
                 {% for dept in expedice_depts %}
-                <div class="board-dept-row">
-                    <span class="board-dept-label">
-                        <span class="dept-badge-sm" style="background:#{{ dept.color }}">{{ dept.name }}</span>
-                        {% if dept['full_name'] and dept['full_name'] != dept['name'] %}
-                        <small class="text-muted ms-1" style="font-size:0.72rem;">{{ dept['full_name'] }}</small>
-                        {% endif %}
-                    </span>
-                    <div class="flex-grow-1 d-flex flex-wrap align-items-center gap-1">
-                        {% set dept_assignments = day_board.get(dept.id, []) %}
-                        {% if dept_assignments %}
-                            {% for a in dept_assignments %}
+                {% set dept_tasks = tasks_by_dept.get(dept.id, []) %}
+                {% set dept_board = day_board.get(dept.id, {}) %}
+
+                <div class="board-dept-header-row">
+                    <span class="dept-badge-sm" style="background:#{{ dept.color }}">{{ dept.name }}</span>
+                    {% if dept['full_name'] and dept['full_name'] != dept['name'] %}
+                    <small class="text-muted ms-1" style="font-size:0.72rem;">{{ dept['full_name'] }}</small>
+                    {% endif %}
+                </div>
+
+                {% if dept_tasks %}
+                    {% for task in dept_tasks %}
+                    {% set task_assignments = dept_board.get(task.id, []) %}
+                    <div class="board-task-row">
+                        <span class="board-task-label">{{ task.name }}</span>
+                        <div class="flex-grow-1 d-flex flex-wrap align-items-center gap-1">
+                            {% for a in task_assignments %}
                             <form method="POST" action="{{ url_for('capacity.board_unassign', assignment_id=a.assignment_id) }}" class="d-inline m-0">
                                 <input type="hidden" name="week_start" value="{{ week_start }}">
                                 <span class="board-emp-card" style="background:#{{ a.color }}">
@@ -174,19 +236,61 @@
                                 </span>
                             </form>
                             {% endfor %}
-                        {% else %}
-                            <span class="text-muted" style="font-size:0.78rem;font-style:italic;">(nikdo)</span>
-                        {% endif %}
-                        {% if not holiday_map.get(ds) and not vacation_map.get(ds) %}
-                        <button class="board-add-btn"
-                            hx-get="{{ url_for('capacity.board_add_panel', week_start=week_start, date_str=ds, dept_id=dept.id) }}"
-                            hx-target="#add-panel-{{ ds }}-{{ dept.id }}"
-                            hx-swap="innerHTML"
-                            title="Přiřadit zaměstnance">+</button>
-                        {% endif %}
+                            {% if not holiday_map.get(ds) and not vacation_map.get(ds) %}
+                            <button class="board-add-btn"
+                                hx-get="{{ url_for('capacity.board_add_panel', week_start=week_start, date_str=ds, dept_id=dept.id, task_id=task.id) }}"
+                                hx-target="#add-panel-{{ ds }}-{{ dept.id }}-{{ task.id }}"
+                                hx-swap="innerHTML"
+                                title="Přiřadit zaměstnance">+</button>
+                            {% endif %}
+                        </div>
                     </div>
-                </div>
-                <div id="add-panel-{{ ds }}-{{ dept.id }}"></div>
+                    <div id="add-panel-{{ ds }}-{{ dept.id }}-{{ task.id }}"></div>
+                    {% endfor %}
+
+                    {% set no_task = dept_board.get(none, []) %}
+                    {% if no_task %}
+                    <div class="board-task-row">
+                        <span class="board-task-label text-muted" style="font-style:italic;">ostatní</span>
+                        <div class="flex-grow-1 d-flex flex-wrap align-items-center gap-1">
+                            {% for a in no_task %}
+                            <form method="POST" action="{{ url_for('capacity.board_unassign', assignment_id=a.assignment_id) }}" class="d-inline m-0">
+                                <input type="hidden" name="week_start" value="{{ week_start }}">
+                                <span class="board-emp-card" style="background:#{{ a.color }}">
+                                    {{ a.name }}<button type="submit" class="board-remove-btn" title="Odebrat">&times;</button>
+                                </span>
+                            </form>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                {% else %}
+                    <div class="board-dept-row">
+                        <div class="flex-grow-1 d-flex flex-wrap align-items-center gap-1">
+                            {% set no_task = dept_board.get(none, []) %}
+                            {% for a in no_task %}
+                            <form method="POST" action="{{ url_for('capacity.board_unassign', assignment_id=a.assignment_id) }}" class="d-inline m-0">
+                                <input type="hidden" name="week_start" value="{{ week_start }}">
+                                <span class="board-emp-card" style="background:#{{ a.color }}">
+                                    {{ a.name }}<button type="submit" class="board-remove-btn" title="Odebrat">&times;</button>
+                                </span>
+                            </form>
+                            {% endfor %}
+                            {% if not no_task %}
+                            <span class="text-muted" style="font-size:0.78rem;font-style:italic;">(nikdo)</span>
+                            {% endif %}
+                            {% if not holiday_map.get(ds) and not vacation_map.get(ds) %}
+                            <button class="board-add-btn"
+                                hx-get="{{ url_for('capacity.board_add_panel', week_start=week_start, date_str=ds, dept_id=dept.id, task_id=0) }}"
+                                hx-target="#add-panel-{{ ds }}-{{ dept.id }}-0"
+                                hx-swap="innerHTML"
+                                title="Přiřadit zaměstnance">+</button>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div id="add-panel-{{ ds }}-{{ dept.id }}-0"></div>
+                {% endif %}
                 {% endfor %}
                 {% endif %}
 
@@ -203,19 +307,39 @@
                             <ul class="dropdown-menu">
                                 <li><h6 class="dropdown-header">Přiřadit k:</h6></li>
                                 {% for dept in vyroba_depts + expedice_depts %}
-                                <li>
-                                    <form method="POST" action="{{ url_for('capacity.board_assign') }}" class="m-0">
-                                        <input type="hidden" name="week_start" value="{{ week_start }}">
-                                        <input type="hidden" name="plan_id" value="{{ plan_id }}">
-                                        <input type="hidden" name="date_str" value="{{ ds }}">
-                                        <input type="hidden" name="dept_id" value="{{ dept.id }}">
-                                        <input type="hidden" name="employee_id" value="{{ e.employee_id }}">
-                                        <button type="submit" class="dropdown-item">
-                                            <span class="dept-badge-sm" style="background:#{{ dept.color }}">{{ dept.name }}</span>
-                                            {% if dept['full_name'] and dept['full_name'] != dept['name'] %} {{ dept['full_name'] }}{% endif %}
-                                        </button>
-                                    </form>
-                                </li>
+                                {% set dept_tasks = tasks_by_dept.get(dept.id, []) %}
+                                {% if dept_tasks %}
+                                    {% for task in dept_tasks %}
+                                    <li>
+                                        <form method="POST" action="{{ url_for('capacity.board_assign') }}" class="m-0">
+                                            <input type="hidden" name="week_start" value="{{ week_start }}">
+                                            <input type="hidden" name="plan_id" value="{{ plan_id }}">
+                                            <input type="hidden" name="date_str" value="{{ ds }}">
+                                            <input type="hidden" name="dept_id" value="{{ dept.id }}">
+                                            <input type="hidden" name="task_id" value="{{ task.id }}">
+                                            <input type="hidden" name="employee_id" value="{{ e.employee_id }}">
+                                            <button type="submit" class="dropdown-item">
+                                                <span class="dept-badge-sm" style="background:#{{ dept.color }}">{{ dept.name }}</span>
+                                                <span class="ms-1">{{ task.name }}</span>
+                                            </button>
+                                        </form>
+                                    </li>
+                                    {% endfor %}
+                                {% else %}
+                                    <li>
+                                        <form method="POST" action="{{ url_for('capacity.board_assign') }}" class="m-0">
+                                            <input type="hidden" name="week_start" value="{{ week_start }}">
+                                            <input type="hidden" name="plan_id" value="{{ plan_id }}">
+                                            <input type="hidden" name="date_str" value="{{ ds }}">
+                                            <input type="hidden" name="dept_id" value="{{ dept.id }}">
+                                            <input type="hidden" name="employee_id" value="{{ e.employee_id }}">
+                                            <button type="submit" class="dropdown-item">
+                                                <span class="dept-badge-sm" style="background:#{{ dept.color }}">{{ dept.name }}</span>
+                                                {% if dept['full_name'] and dept['full_name'] != dept['name'] %} {{ dept['full_name'] }}{% endif %}
+                                            </button>
+                                        </form>
+                                    </li>
+                                {% endif %}
                                 {% endfor %}
                             </ul>
                             {% endif %}

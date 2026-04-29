@@ -12,7 +12,7 @@ from app.models.capacity import (
     get_board_assignments, get_absent_employees_for_dates,
     board_assign_employee, board_unassign_employee,
 )
-from app.models.department import get_all_departments
+from app.models.department import get_all_departments, get_tasks_for_department
 from app.models.employee import get_all_employees
 from app.utils.holidays import get_holidays_for_dates
 from app.models.company_vacation import get_vacation_days_map
@@ -95,7 +95,17 @@ def board_view(week_start):
         logger.exception("board_view: chyba v get_absent_employees_for_dates")
         absent = {d.isoformat(): [] for d in dates}
 
+    # Tasks per department for board display
+    try:
+        tasks_by_dept = {}
+        for d in all_depts:
+            tasks_by_dept[d['id']] = get_tasks_for_department(d['id'], active_only=True)
+    except Exception:
+        logger.exception("board_view: chyba při načítání prací oddělení")
+        tasks_by_dept = {}
+
     # Unassigned: active employees who have no assignment and no full-day absence that day
+    # board structure: {date: {dept_id: {task_id: [assignments]}}}
     try:
         all_emps = get_all_employees(active_only=True)
         unassigned = {}
@@ -103,9 +113,10 @@ def board_view(week_start):
             ds = d.isoformat()
             absent_ids = {e['employee_id'] for e in absent.get(ds, [])}
             assigned_ids = set()
-            for dept_assignments in board.get(ds, {}).values():
-                for a in dept_assignments:
-                    assigned_ids.add(a['employee_id'])
+            for dept_task_map in board.get(ds, {}).values():
+                for task_assignments in dept_task_map.values():
+                    for a in task_assignments:
+                        assigned_ids.add(a['employee_id'])
             from app.models.capacity import _emp_color
             unassigned[ds] = [
                 {'employee_id': e['id'], 'name': e['name'], 'color': _emp_color(e['id'])}
@@ -135,6 +146,7 @@ def board_view(week_start):
         plan_id=plan_id,
         vyroba_depts=vyroba_depts,
         expedice_depts=expedice_depts,
+        tasks_by_dept=tasks_by_dept,
         board=board,
         absent=absent,
         unassigned=unassigned,
@@ -145,13 +157,14 @@ def board_view(week_start):
     )
 
 
-@bp.route('/board/add-panel/<week_start>/<date_str>/<int:dept_id>')
-def board_add_panel(week_start, date_str, dept_id):
+@bp.route('/board/add-panel/<week_start>/<date_str>/<int:dept_id>/<int:task_id>')
+def board_add_panel(week_start, date_str, dept_id, task_id):
+    """task_id=0 znamená přiřazení na oddělení bez konkrétní práce."""
     plan_id = get_or_find_plan(week_start)
     if plan_id is None:
         plan_id = create_plan_for_week(week_start)
 
-    # Already assigned on this day (any dept)
+    # Already assigned on this day (any dept/task)
     from app.db import get_db
     db = get_db()
     assigned_rows = db.execute(
@@ -170,8 +183,15 @@ def board_add_panel(week_start, date_str, dept_id):
     ).fetchall()
     absent_ids = {r['employee_id'] for r in absent_rows}
 
+    from app.models.capacity import _emp_color
     all_emps = get_all_employees(active_only=True)
-    employees = [e for e in all_emps if e['id'] not in assigned_ids and e['id'] not in absent_ids]
+    employees = [
+        {'id': e['id'], 'name': e['name'], 'color': _emp_color(e['id'])}
+        for e in all_emps
+        if e['id'] not in assigned_ids and e['id'] not in absent_ids
+    ]
+
+    real_task_id = task_id if task_id != 0 else None
 
     return render_template(
         'capacity/_board_add_panel.html',
@@ -180,6 +200,8 @@ def board_add_panel(week_start, date_str, dept_id):
         plan_id=plan_id,
         date_str=date_str,
         dept_id=dept_id,
+        task_id=real_task_id,
+        task_id_url=task_id,  # pro zavřít tlačítko (URL fragment)
     )
 
 
@@ -190,9 +212,10 @@ def board_assign():
     employee_id = request.form.get('employee_id', type=int)
     date_str = request.form.get('date_str', '')
     dept_id = request.form.get('dept_id', type=int)
+    task_id = request.form.get('task_id', type=int)  # může být None
 
     if plan_id and employee_id and date_str and dept_id:
-        board_assign_employee(plan_id, employee_id, date_str, dept_id)
+        board_assign_employee(plan_id, employee_id, date_str, dept_id, task_id)
 
     return redirect(url_for('capacity.board_view', week_start=week_start))
 

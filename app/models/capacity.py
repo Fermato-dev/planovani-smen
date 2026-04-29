@@ -189,7 +189,7 @@ def _emp_color(emp_id):
 
 
 def get_board_assignments(plan_id, dates):
-    """Vrátí {date_str: {dept_id: [{'assignment_id':..,'employee_id':..,'name':..,'color':..}]}}"""
+    """Vrátí {date_str: {dept_id: {task_id_or_None: [{'assignment_id':..,'employee_id':..,'name':..,'color':..,'task_name':..}]}}}"""
     db = get_db()
     result = {}
     for d in dates:
@@ -197,11 +197,13 @@ def get_board_assignments(plan_id, dates):
         result[ds] = {}
 
     rows = db.execute(
-        """SELECT a.id as assignment_id, a.employee_id, a.department_id,
+        """SELECT a.id as assignment_id, a.employee_id, a.department_id, a.task_id,
                   CAST(a.date AS TEXT) as date_str,
-                  e.name
+                  e.name,
+                  t.name as task_name
            FROM assignments a
            JOIN employees e ON e.id = a.employee_id
+           LEFT JOIN tasks t ON t.id = a.task_id
            WHERE a.plan_id = ? AND a.is_absence = 0
              AND a.date IN ({})
         """.format(','.join('?' for _ in dates)),
@@ -211,15 +213,20 @@ def get_board_assignments(plan_id, dates):
     for r in rows:
         ds = str(r['date_str'])
         dept_id = r['department_id']
+        task_id = r['task_id']  # může být None
         if ds not in result:
             result[ds] = {}
         if dept_id not in result[ds]:
-            result[ds][dept_id] = []
-        result[ds][dept_id].append({
+            result[ds][dept_id] = {}
+        if task_id not in result[ds][dept_id]:
+            result[ds][dept_id][task_id] = []
+        result[ds][dept_id][task_id].append({
             'assignment_id': r['assignment_id'],
             'employee_id': r['employee_id'],
             'name': r['name'],
             'color': _emp_color(r['employee_id']),
+            'task_id': task_id,
+            'task_name': r['task_name'],
         })
     return result
 
@@ -252,8 +259,9 @@ def get_absent_employees_for_dates(dates):
     return result
 
 
-def board_assign_employee(plan_id, employee_id, date_str, dept_id):
-    """Přiřadí zaměstnance do oddělení na datum. Pokud přiřazení již existuje, nic nedělá. Vrátí assignment_id."""
+def board_assign_employee(plan_id, employee_id, date_str, dept_id, task_id=None):
+    """Přiřadí zaměstnance do oddělení/práce na datum.
+    Pokud přiřazení již existuje (UNIQUE constraint), aktualizuje dept+task. Vrátí assignment_id."""
     db = get_db()
     existing = db.execute(
         """SELECT id FROM assignments
@@ -261,11 +269,16 @@ def board_assign_employee(plan_id, employee_id, date_str, dept_id):
         (plan_id, employee_id, date_str)
     ).fetchone()
     if existing:
+        db.execute(
+            "UPDATE assignments SET department_id=?, task_id=? WHERE id=?",
+            (dept_id, task_id, existing['id'])
+        )
+        db.commit()
         return existing['id']
     cur = db.execute(
-        """INSERT INTO assignments (plan_id, employee_id, date, department_id, is_absence)
-           VALUES (?, ?, ?, ?, 0)""",
-        (plan_id, employee_id, date_str, dept_id)
+        """INSERT INTO assignments (plan_id, employee_id, date, department_id, task_id, is_absence)
+           VALUES (?, ?, ?, ?, ?, 0)""",
+        (plan_id, employee_id, date_str, dept_id, task_id)
     )
     db.commit()
     return cur.lastrowid

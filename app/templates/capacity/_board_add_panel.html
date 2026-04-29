@@ -7,6 +7,7 @@
       <input type="hidden" name="plan_id" value="{{ plan_id }}">
       <input type="hidden" name="date_str" value="{{ date_str }}">
       <input type="hidden" name="dept_id" value="{{ dept_id }}">
+      {% if task_id %}<input type="hidden" name="task_id" value="{{ task_id }}">{% endif %}
       <input type="hidden" name="employee_id" value="{{ e.id }}">
       <button type="submit" class="assign-emp-btn" style="background:#{{ e.color }}">{{ e.name }}</button>
     </form>
@@ -16,5 +17,5 @@
   <small class="text-muted">Žádní volní zaměstnanci</small>
   {% endif %}
   <button type="button" class="btn btn-link text-muted p-0" style="font-size:0.75rem;"
-    onclick="document.getElementById('add-panel-{{ date_str }}-{{ dept_id }}').innerHTML=''">zavřít</button>
+    onclick="document.getElementById('add-panel-{{ date_str }}-{{ dept_id }}-{{ task_id_url }}').innerHTML=''">zavřít</button>
 </div>
