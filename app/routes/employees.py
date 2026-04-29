@@ -87,7 +87,10 @@ def edit(emp_id):
             return render_template('employees/form.html', employee=employee,
                                    shifts=shifts, departments=departments,
                                    tasks=tasks, qualifications=qualifications)
-        update_employee(emp_id, name=name, default_shift_id=default_shift_id, note=note, email=email)
+        # Pracovní dny: checkboxy 0-6, NULL = všechny
+        work_days_list = request.form.getlist('work_days')
+        work_days = ','.join(sorted(work_days_list)) if work_days_list else None
+        update_employee(emp_id, name=name, default_shift_id=default_shift_id, note=note, email=email, work_days=work_days)
         _save_qualifications(emp_id)
         flash(f'Zaměstnanec {name} aktualizován.', 'success')
         return redirect(url_for('employees.detail', emp_id=emp_id))

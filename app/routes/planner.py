@@ -12,7 +12,7 @@ from app.models.day_requirement import (
 from app.models.work_plan import has_entries_map
 from app.models.company_vacation import get_company_vacations_for_week, get_vacation_days_map
 from app.utils.holidays import get_holidays_for_dates
-from app.models.employee import get_employee
+from app.models.employee import get_employee, employee_works_on_day
 from app.models.department import get_all_departments, get_tasks_for_department
 from app.models.shift import get_all_shifts
 from app.services.planner_service import (
@@ -372,11 +372,20 @@ def fill_week(plan_id, emp_id):
     is_absence = request.form.get('action') == 'absence'
     absence_type = request.form.get('absence_type', 'jine')
 
+    from app.utils.holidays import get_holidays_for_dates
     dates = get_week_dates(plan['week_start'])
+    holiday_map = get_holidays_for_dates(dates)
+    emp = get_employee(emp_id)
     filled = 0
     for i, d in enumerate(dates):
         # Skip weekends unless explicitly included
         if not include_weekends and i >= 5:
+            continue
+        # Skip public holidays (only for regular shifts, not absences)
+        if not is_absence and d.isoformat() in holiday_map:
+            continue
+        # Skip days the employee doesn't work (only for regular shifts)
+        if not is_absence and emp and not employee_works_on_day(emp, d.weekday()):
             continue
         if is_absence:
             upsert_assignment(plan_id, emp_id, d.isoformat(),
@@ -387,7 +396,6 @@ def fill_week(plan_id, emp_id):
                               task_id=task_id, note=note)
         filled += 1
 
-    emp = get_employee(emp_id)
     emp_name = emp['name'] if emp else '?'
     flash(f'{emp_name}: vyplněno {filled} dní.', 'success')
     return redirect(url_for('planner.week_view', week_start=plan['week_start']))

@@ -43,6 +43,22 @@
                         <label class="form-label">Poznámka</label>
                         <textarea name="note" class="form-control" rows="2">{{ employee.note if employee else '' }}</textarea>
                     </div>
+                    <div class="mb-3">
+                        <label class="form-label">Pracovní dny</label>
+                        {% set wd = (employee.work_days if employee and employee.work_days else '') %}
+                        {% set wd_set = wd.split(',') if wd else [] %}
+                        <div class="d-flex gap-2 flex-wrap">
+                            {% for idx, label in [('0','Po'),('1','Út'),('2','St'),('3','Čt'),('4','Pá'),('5','So'),('6','Ne')] %}
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="checkbox" name="work_days"
+                                       value="{{ idx }}" id="wd_{{ idx }}"
+                                       {{ 'checked' if (not wd or idx in wd_set) }}>
+                                <label class="form-check-label" for="wd_{{ idx }}">{{ label }}</label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="form-text">Nezatrhněte dny, kdy zaměstnanec nepracuje. Prázdný výběr = pracuje každý den.</div>
+                    </div>
                 </div>
             </div>
         </div>

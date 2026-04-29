@@ -206,6 +206,13 @@ def _migrate_db(db):
     """)
     db.commit()
 
+    # Pracovní dny zaměstnance (NULL = všechny, "0,1,2" = Po,Út,St)
+    if 'employees' in tables:
+        emp_cols = [r[1] for r in db.execute("PRAGMA table_info(employees)").fetchall()]
+        if 'work_days' not in emp_cols:
+            db.execute("ALTER TABLE employees ADD COLUMN work_days TEXT DEFAULT NULL")
+            db.commit()
+
     # Půldenní absence – příznak v constraints
     if 'constraints' in tables:
         c_cols = [r[1] for r in db.execute("PRAGMA table_info(constraints)").fetchall()]

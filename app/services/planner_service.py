@@ -5,7 +5,7 @@ from app.models.plan import (
     create_plan, get_plan_by_week, upsert_assignment,
     get_assignments_for_plan, clear_all_assignments
 )
-from app.models.employee import get_all_employees, get_default_pattern, get_qualified_tasks
+from app.models.employee import get_all_employees, get_default_pattern, get_qualified_tasks, employee_works_on_day
 from app.models.constraint import get_constraints_for_week, _parse_date
 from app.db import get_db
 
@@ -125,7 +125,8 @@ def build_plan_grid(plan_id, week_start):
                 'date': d,
                 'date_str': d.isoformat(),
                 'assignment': cell,
-                'is_weekend': d.weekday() >= 5
+                'is_weekend': d.weekday() >= 5,
+                'works_on_day': employee_works_on_day(emp, d.weekday())
             })
         grid.append(row)
 
@@ -179,7 +180,11 @@ def _fill_patterns_and_constraints(plan_id, ws, dates):
 
     When a pattern has department but no task, a random qualified task is
     assigned so employees rotate through all positions they're qualified for.
+    Skips Czech public holidays.
     """
+    from app.utils.holidays import get_holidays_for_dates
+    holiday_map = get_holidays_for_dates(dates)
+
     employees = get_all_employees(active_only=True)
     for emp in employees:
         pattern = get_default_pattern(emp['id'])
@@ -188,11 +193,16 @@ def _fill_patterns_and_constraints(plan_id, ws, dates):
         for p in pattern:
             day_idx = p['day_of_week']
             if day_idx < 7:
+                d = dates[day_idx]
+                if d.isoformat() in holiday_map:
+                    continue  # Přeskočit svátek
+                if not employee_works_on_day(emp, d.weekday()):
+                    continue  # Přeskočit den kdy zaměstnanec nepracuje
                 task_id = p['task_id'] or task_rotation.get(day_idx)
                 upsert_assignment(
                     plan_id=plan_id,
                     employee_id=emp['id'],
-                    date=dates[day_idx].isoformat(),
+                    date=d.isoformat(),
                     shift_template_id=p['shift_template_id'],
                     department_id=p['department_id'],
                     task_id=task_id

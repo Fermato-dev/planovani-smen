@@ -388,7 +388,7 @@
                         </div>
                     </td>
                     {% for day in row.days %}
-                    <td class="p-0 {{ 'col-weekend' if day.is_weekend }}" data-row="{{ row_idx }}" data-col="{{ loop.index0 }}">
+                    <td class="p-0 {{ 'col-weekend' if day.is_weekend }}{{ ' col-no-work' if not day.works_on_day }}" data-row="{{ row_idx }}" data-col="{{ loop.index0 }}">
                         <div class="plan-cell-wrapper"
                              id="cell-{{ row.employee.id }}-{{ day.date_str }}">
                             <span class="cell-spinner"><i class="bi bi-arrow-repeat spin"></i></span>

@@ -18,7 +18,7 @@ from app.models.capacity import (
     board_set_note,
 )
 from app.models.department import get_all_departments
-from app.models.employee import get_all_employees
+from app.models.employee import get_all_employees, employee_works_on_day
 from app.utils.holidays import get_holidays_for_dates
 from app.models.company_vacation import get_vacation_days_map
 
@@ -123,7 +123,9 @@ def board_view(week_start):
             unassigned[ds] = [
                 {'employee_id': e['id'], 'name': e['name'], 'color': _emp_color(e['id'])}
                 for e in all_emps
-                if e['id'] not in assigned_ids and e['id'] not in absent_ids
+                if e['id'] not in assigned_ids
+                and e['id'] not in absent_ids
+                and employee_works_on_day(e, d.weekday())
             ]
     except Exception:
         logger.exception("board_view: chyba při výpočtu nepřiřazených")

@@ -42,7 +42,7 @@ def update_employee(emp_id, **kwargs):
     fields = []
     values = []
     for key, val in kwargs.items():
-        if key in ('name', 'default_shift_id', 'active', 'note', 'email', 'sort_order'):
+        if key in ('name', 'default_shift_id', 'active', 'note', 'email', 'sort_order', 'work_days'):
             fields.append(f"{key} = ?")
             values.append(val)
     if fields:
@@ -55,6 +55,24 @@ def delete_employee(emp_id):
     db = get_db()
     db.execute("UPDATE employees SET active = 0 WHERE id = ?", (emp_id,))
     db.commit()
+
+
+def parse_work_days(work_days_str):
+    """Vrátí set čísel dnů (0=Po … 6=Ne) ze stringu 'work_days'. None → všechny dny."""
+    if not work_days_str:
+        return None  # NULL = pracuje každý den
+    try:
+        return {int(x.strip()) for x in work_days_str.split(',') if x.strip().isdigit()}
+    except Exception:
+        return None
+
+
+def employee_works_on_day(emp, weekday):
+    """Vrátí True pokud zaměstnanec pracuje v daný den týdne (0=Po…6=Ne)."""
+    work_days = parse_work_days(emp['work_days'] if 'work_days' in emp.keys() else None)
+    if work_days is None:
+        return True
+    return weekday in work_days
 
 
 # --- Qualifications ---
