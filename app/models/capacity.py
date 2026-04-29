@@ -166,9 +166,18 @@ def create_plan_for_week(week_start):
 
 # Paleta barev pro kartičky zaměstnanců (generuje se z employee_id)
 _BOARD_EMP_COLORS = [
-    '2e7d32', '1565c0', '6a1b9a', 'c62828', 'e65100', '00838f',
-    '558b2f', '0277bd', '4527a0', 'ad1457', '00695c', '37474f',
-    'f9a825', '4e342e', '0d47a1', '1b5e20',
+    '5b9bd5',  # ocelová modrá
+    '70ad47',  # travní zelená
+    'ed7d31',  # teplá oranžová
+    'a076c0',  # měkká fialová
+    '4ebcd5',  # azurová
+    'd95f5f',  # měkká červená
+    '58b07c',  # smaragdová
+    'f0a500',  # jantar
+    '3a87c8',  # královská modrá
+    'c47dba',  # mauve
+    '60a99b',  # teal
+    'e07b54',  # terakota
 ]
 
 

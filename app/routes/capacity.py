@@ -116,6 +116,14 @@ def board_view(week_start):
         logger.exception("board_view: chyba při výpočtu nepřiřazených")
         raise
 
+    # Available per day for summary badges
+    try:
+        available = get_available_per_day(dates)
+    except Exception:
+        available = {}
+
+    today = date.today().isoformat()
+
     return render_template(
         'capacity/board.html',
         week_start=week_start,
@@ -123,12 +131,14 @@ def board_view(week_start):
         prev_week=prev_week,
         next_week=next_week,
         today_week=today_week,
+        today=today,
         plan_id=plan_id,
         vyroba_depts=vyroba_depts,
         expedice_depts=expedice_depts,
         board=board,
         absent=absent,
         unassigned=unassigned,
+        available=available,
         holiday_map=holiday_map,
         vacation_map=vacation_map,
         day_names=DAY_NAMES_CZ,
@@ -192,6 +202,15 @@ def board_unassign(assignment_id):
     week_start = request.form.get('week_start', '')
     board_unassign_employee(assignment_id)
     return redirect(url_for('capacity.board_view', week_start=week_start))
+
+
+@bp.route('/board/propsat/<week_start>', methods=['POST'])
+def board_propsat(week_start):
+    """Propíše kapacitní nástěnku do plánovače (assignments).
+    Nástěnka a plánovač sdílejí stejnou tabulku assignments,
+    takže 'propsat' = jen přesměrovat do plánovače.
+    """
+    return redirect(url_for('planner.week_view', week_start=week_start))
 
 
 @bp.route('/week/<week_start>')
