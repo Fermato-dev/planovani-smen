@@ -11,9 +11,6 @@
         {% if week_start != today_week %}
         <a href="{{ url_for('capacity.board_view', week_start=today_week) }}" class="btn btn-outline-primary btn-sm">Dnes</a>
         {% endif %}
-        <a href="{{ url_for('capacity.week_view', week_start=week_start) }}" class="btn btn-outline-secondary btn-sm">
-            <i class="bi bi-bar-chart-steps"></i> Kapacitní přehled
-        </a>
     </div>
 </div>
 
@@ -113,7 +110,7 @@
             <div class="board-emp-chip-wrap">
                 <span class="board-emp-chip" style="border-left:3px solid #{{ emp.color }}">
                     <span class="chip-name">{{ emp.name }}</span>
-                    {% if emp.shift_name %}<span class="chip-shift">{{ emp.shift_name[:3] }}</span>{% endif %}
+                    {% if emp.shift_name %}<span class="chip-shift">{{ emp.shift_name }}</span>{% endif %}
                     {% if emp.note %}<span class="chip-note" title="{{ emp.note }}">{{ emp.note }}</span>{% endif %}
                     {% if editable %}
                     <form method="POST" action="{{ url_for('capacity.board_remove_from_task', bta_id=emp.bta_id) }}" class="d-inline m-0">
