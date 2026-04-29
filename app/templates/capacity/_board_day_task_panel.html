@@ -1,0 +1,20 @@
+<div class="board-assign-panel">
+  <div class="board-assign-panel-title">Přidat práci na tento den:</div>
+  {% if tasks %}
+  <div class="d-flex flex-wrap gap-1 mb-1">
+    {% for task in tasks %}
+    <form method="POST" action="{{ url_for('capacity.board_add_day_task_view') }}" class="d-inline">
+      <input type="hidden" name="week_start" value="{{ week_start }}">
+      <input type="hidden" name="plan_id" value="{{ plan_id }}">
+      <input type="hidden" name="date_str" value="{{ date_str }}">
+      <input type="hidden" name="task_id" value="{{ task.id }}">
+      <button type="submit" class="assign-task-btn">{{ task.name }}</button>
+    </form>
+    {% endfor %}
+  </div>
+  {% else %}
+  <small class="text-muted">Všechny práce tohoto oddělení jsou již přidány</small>
+  {% endif %}
+  <button type="button" class="btn btn-link text-muted p-0" style="font-size:.75rem"
+    onclick="document.getElementById('day-task-panel-{{ date_str }}-{{ dept_id }}').innerHTML=''">zavřít</button>
+</div>

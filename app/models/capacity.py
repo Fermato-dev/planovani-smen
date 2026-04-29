@@ -189,74 +189,82 @@ def _emp_color(emp_id):
 
 
 def get_board_assignments(plan_id, dates):
-    """Employee-centric board data.
-    Vrátí {date_str: {dept_id: [
-        {assignment_id, employee_id, name, color, shift_name, note,
-         tasks: [{bta_id, task_id, task_name}]}
-    ]}}
+    """Task-centric board s dynamickým seznamem prací per den.
+    Vrátí {date_str: {dept_id: {task_id: {
+        'task_name': str,
+        'bdt_id': int or None,
+        'employees': [{bta_id, assignment_id, employee_id, name, color, shift_name, note}]
+    }}}}
+    Zahrnuje i práce z board_day_tasks bez přiřazených zaměstnanců (prázdné řádky).
     """
     db = get_db()
-    result = {}
-    for d in dates:
-        ds = d.isoformat()
-        result[ds] = {}
+    date_strs = [d.isoformat() for d in dates]
+    ph = ','.join('?' for _ in dates)
 
-    rows = db.execute(
-        """SELECT a.id as assignment_id, a.employee_id, a.department_id,
-                  CAST(a.date AS TEXT) as date_str,
-                  a.note,
-                  e.name,
-                  st.name as shift_name
-           FROM assignments a
-           JOIN employees e ON e.id = a.employee_id
-           LEFT JOIN shift_templates st ON st.id = a.shift_template_id
-           WHERE a.plan_id = ? AND a.is_absence = 0
-             AND a.date IN ({})
-           ORDER BY e.name
-        """.format(','.join('?' for _ in dates)),
-        [plan_id] + [d.isoformat() for d in dates]
+    result = {ds: {} for ds in date_strs}
+
+    # 1. Načíst dynamický seznam prací pro každý den
+    bdt_rows = db.execute(
+        f"""SELECT bdt.id as bdt_id, CAST(bdt.date AS TEXT) as ds,
+                   bdt.task_id, t.name as task_name, t.department_id
+            FROM board_day_tasks bdt
+            JOIN tasks t ON t.id = bdt.task_id
+            WHERE bdt.plan_id = ? AND bdt.date IN ({ph})
+            ORDER BY t.name""",
+        [plan_id] + date_strs
     ).fetchall()
 
-    assignment_map = {}  # assignment_id → dict v result
-
-    for r in rows:
-        ds = str(r['date_str'])
+    for r in bdt_rows:
+        ds = str(r['ds'])
         dept_id = r['department_id']
-        if ds not in result:
-            result[ds] = {}
-        if dept_id not in result[ds]:
-            result[ds][dept_id] = []
-        entry = {
+        task_id = r['task_id']
+        result.setdefault(ds, {}).setdefault(dept_id, {})
+        if task_id not in result[ds][dept_id]:
+            result[ds][dept_id][task_id] = {
+                'task_name': r['task_name'],
+                'bdt_id': r['bdt_id'],
+                'employees': [],
+            }
+
+    # 2. Načíst zaměstnance přiřazené k pracem
+    emp_rows = db.execute(
+        f"""SELECT bta.id as bta_id, bta.task_id,
+                   a.id as assignment_id, a.employee_id, a.department_id,
+                   CAST(a.date AS TEXT) as ds,
+                   a.note, e.name,
+                   st.name as shift_name
+            FROM board_task_assignments bta
+            JOIN assignments a ON a.id = bta.assignment_id
+            JOIN employees e ON e.id = a.employee_id
+            LEFT JOIN shift_templates st ON st.id = a.shift_template_id
+            WHERE a.plan_id = ? AND a.is_absence = 0 AND a.date IN ({ph})
+            ORDER BY e.name""",
+        [plan_id] + date_strs
+    ).fetchall()
+
+    for r in emp_rows:
+        ds = str(r['ds'])
+        dept_id = r['department_id']
+        task_id = r['task_id']
+        result.setdefault(ds, {}).setdefault(dept_id, {})
+        if task_id not in result[ds][dept_id]:
+            # Práce je přiřazena zaměstnanci ale není v board_day_tasks — přidej ji
+            t = db.execute("SELECT name FROM tasks WHERE id=?", (task_id,)).fetchone()
+            result[ds][dept_id][task_id] = {
+                'task_name': t['name'] if t else f'#{task_id}',
+                'bdt_id': None,
+                'employees': [],
+            }
+        result[ds][dept_id][task_id]['employees'].append({
+            'bta_id': r['bta_id'],
             'assignment_id': r['assignment_id'],
             'employee_id': r['employee_id'],
             'name': r['name'],
             'color': _emp_color(r['employee_id']),
             'shift_name': r['shift_name'] or '',
             'note': r['note'] or '',
-            'tasks': [],
-        }
-        result[ds][dept_id].append(entry)
-        assignment_map[r['assignment_id']] = entry
+        })
 
-    # Přidat tasky z board_task_assignments
-    if assignment_map:
-        placeholders = ','.join('?' for _ in assignment_map)
-        bta_rows = db.execute(
-            f"""SELECT bta.id as bta_id, bta.assignment_id, bta.task_id, t.name as task_name
-               FROM board_task_assignments bta
-               JOIN tasks t ON t.id = bta.task_id
-               WHERE bta.assignment_id IN ({placeholders})
-               ORDER BY t.name""",
-            list(assignment_map.keys())
-        ).fetchall()
-        for r in bta_rows:
-            entry = assignment_map.get(r['assignment_id'])
-            if entry:
-                entry['tasks'].append({
-                    'bta_id': r['bta_id'],
-                    'task_id': r['task_id'],
-                    'task_name': r['task_name'],
-                })
     return result
 
 
@@ -288,64 +296,141 @@ def get_absent_employees_for_dates(dates):
     return result
 
 
-def board_assign_employee(plan_id, employee_id, date_str, dept_id):
-    """Přiřadí zaměstnance do oddělení na datum (bez konkrétní práce – ta se přidává přes board_add_task).
-    Pokud přiřazení již existuje, přesune ho do nového oddělení. Vrátí assignment_id."""
+def board_assign_to_task(plan_id, employee_id, date_str, task_id):
+    """Přiřadí zaměstnance ke konkrétní práci na den.
+    1. Najde/vytvoří assignment (dept se bere z task.department_id)
+    2. Přidá task do board_day_tasks (zajistí viditelný řádek)
+    3. Přidá board_task_assignments záznam
+    Vrátí assignment_id.
+    """
     db = get_db()
+    task = db.execute("SELECT department_id FROM tasks WHERE id=?", (task_id,)).fetchone()
+    if not task:
+        return None
+    dept_id = task['department_id']
+
     existing = db.execute(
-        """SELECT id FROM assignments
-           WHERE plan_id = ? AND employee_id = ? AND date = ? AND is_absence = 0""",
+        "SELECT id FROM assignments WHERE plan_id=? AND employee_id=? AND date=? AND is_absence=0",
         (plan_id, employee_id, date_str)
     ).fetchone()
     if existing:
-        db.execute(
-            "UPDATE assignments SET department_id=? WHERE id=?",
-            (dept_id, existing['id'])
+        assignment_id = existing['id']
+        db.execute("UPDATE assignments SET department_id=? WHERE id=?", (dept_id, assignment_id))
+    else:
+        cur = db.execute(
+            "INSERT INTO assignments (plan_id, employee_id, date, department_id, is_absence) VALUES (?,?,?,?,0)",
+            (plan_id, employee_id, date_str, dept_id)
         )
-        db.commit()
-        return existing['id']
-    cur = db.execute(
-        """INSERT INTO assignments (plan_id, employee_id, date, department_id, is_absence)
-           VALUES (?, ?, ?, ?, 0)""",
-        (plan_id, employee_id, date_str, dept_id)
-    )
-    db.commit()
-    return cur.lastrowid
+        assignment_id = cur.lastrowid
 
-
-def board_add_task(assignment_id, task_id):
-    """Přidá práci k přiřazení zaměstnance. Pokud již existuje, nic nedělá."""
-    db = get_db()
     db.execute(
-        "INSERT OR IGNORE INTO board_task_assignments (assignment_id, task_id) VALUES (?, ?)",
+        "INSERT OR IGNORE INTO board_day_tasks (plan_id, date, task_id) VALUES (?,?,?)",
+        (plan_id, date_str, task_id)
+    )
+    db.execute(
+        "INSERT OR IGNORE INTO board_task_assignments (assignment_id, task_id) VALUES (?,?)",
         (assignment_id, task_id)
     )
     db.commit()
+    return assignment_id
 
 
 def board_remove_task(bta_id):
-    """Odebere jednu práci z přiřazení zaměstnance (zaměstnanec zůstane v oddělení)."""
+    """Odebere zaměstnance z práce.
+    Pokud mu nezbyde žádná práce, smaže i celý assignment → vrátí se do nepřiřazených.
+    """
     db = get_db()
-    db.execute("DELETE FROM board_task_assignments WHERE id = ?", (bta_id,))
+    bta = db.execute("SELECT assignment_id FROM board_task_assignments WHERE id=?", (bta_id,)).fetchone()
+    if not bta:
+        return
+    assignment_id = bta['assignment_id']
+    db.execute("DELETE FROM board_task_assignments WHERE id=?", (bta_id,))
+    remaining = db.execute(
+        "SELECT COUNT(*) FROM board_task_assignments WHERE assignment_id=?", (assignment_id,)
+    ).fetchone()[0]
+    if remaining == 0:
+        db.execute("DELETE FROM assignments WHERE id=?", (assignment_id,))
     db.commit()
 
 
-def get_available_tasks_for_assignment(assignment_id, dept_id):
-    """Vrátí aktivní tasky oddělení, které zatím nejsou přiřazeny k danému assignment_id."""
+def board_add_day_task(plan_id, date_str, task_id):
+    """Přidá práci do viditelného seznamu pro daný den (prázdný řádek bez zaměstnanců)."""
+    db = get_db()
+    db.execute(
+        "INSERT OR IGNORE INTO board_day_tasks (plan_id, date, task_id) VALUES (?,?,?)",
+        (plan_id, date_str, task_id)
+    )
+    db.commit()
+
+
+def board_remove_day_task(bdt_id):
+    """Odebere práci ze dne a všechna přiřazení zaměstnanců k ní na tento den."""
+    db = get_db()
+    bdt = db.execute("SELECT plan_id, date, task_id FROM board_day_tasks WHERE id=?", (bdt_id,)).fetchone()
+    if not bdt:
+        return
+    # Najdi a smaž bta záznamy i potenciálně osiřelé assignments
+    bta_rows = db.execute(
+        """SELECT bta.id, bta.assignment_id FROM board_task_assignments bta
+           JOIN assignments a ON a.id = bta.assignment_id
+           WHERE a.plan_id=? AND a.date=? AND bta.task_id=?""",
+        (bdt['plan_id'], bdt['date'], bdt['task_id'])
+    ).fetchall()
+    for row in bta_rows:
+        db.execute("DELETE FROM board_task_assignments WHERE id=?", (row['id'],))
+        remaining = db.execute(
+            "SELECT COUNT(*) FROM board_task_assignments WHERE assignment_id=?", (row['assignment_id'],)
+        ).fetchone()[0]
+        if remaining == 0:
+            db.execute("DELETE FROM assignments WHERE id=?", (row['assignment_id'],))
+    db.execute("DELETE FROM board_day_tasks WHERE id=?", (bdt_id,))
+    db.commit()
+
+
+def get_tasks_not_on_day(plan_id, date_str, dept_id):
+    """Vrátí aktivní tasky oddělení, které ještě nejsou v board_day_tasks pro daný den."""
     db = get_db()
     already = {r[0] for r in db.execute(
-        "SELECT task_id FROM board_task_assignments WHERE assignment_id = ?",
-        (assignment_id,)
+        """SELECT bdt.task_id FROM board_day_tasks bdt
+           JOIN tasks t ON t.id = bdt.task_id
+           WHERE bdt.plan_id=? AND bdt.date=? AND t.department_id=?""",
+        (plan_id, date_str, dept_id)
     ).fetchall()}
     all_tasks = db.execute(
-        "SELECT id, name FROM tasks WHERE department_id = ? AND active = 1 ORDER BY name",
+        "SELECT id, name FROM tasks WHERE department_id=? AND active=1 ORDER BY name",
         (dept_id,)
     ).fetchall()
     return [t for t in all_tasks if t['id'] not in already]
 
 
+def get_unassigned_for_task(plan_id, date_str, task_id):
+    """Vrátí aktivní zaměstnance, kteří nejsou přiřazeni k dané práci na tento den
+    (mohou být přiřazeni k jiné práci — to je v pořádku)."""
+    db = get_db()
+    # Zaměstnanci, kteří už mají tuto konkrétní práci
+    already = {r[0] for r in db.execute(
+        """SELECT a.employee_id FROM board_task_assignments bta
+           JOIN assignments a ON a.id = bta.assignment_id
+           WHERE a.plan_id=? AND a.date=? AND bta.task_id=?""",
+        (plan_id, date_str, task_id)
+    ).fetchall()}
+    # Celodenní absence
+    absent = {r[0] for r in db.execute(
+        """SELECT DISTINCT employee_id FROM constraints
+           WHERE date_from <= ? AND date_to >= ?
+             AND (half_day IS NULL OR half_day = 0)""",
+        (date_str, date_str)
+    ).fetchall()}
+    from app.models.employee import get_all_employees
+    return [
+        {'id': e['id'], 'name': e['name'], 'color': _emp_color(e['id'])}
+        for e in get_all_employees(active_only=True)
+        if e['id'] not in already and e['id'] not in absent
+    ]
+
+
 def board_set_note(assignment_id, note):
-    """Uloží poznámku k přiřazení zaměstnance."""
+    """Uloží poznámku k přiřazení zaměstnance (platí pro celý den)."""
     db = get_db()
     db.execute("UPDATE assignments SET note=? WHERE id=?", (note, assignment_id))
     db.commit()

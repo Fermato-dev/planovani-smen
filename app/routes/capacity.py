@@ -10,8 +10,10 @@ from app.models.capacity import (
     get_planner_counts,
     get_or_find_plan, create_plan_for_week,
     get_board_assignments, get_absent_employees_for_dates,
-    board_assign_employee, board_unassign_employee,
-    board_add_task, board_remove_task, get_available_tasks_for_assignment,
+    board_unassign_employee,
+    board_assign_to_task, board_remove_task,
+    board_add_day_task, board_remove_day_task,
+    get_tasks_not_on_day, get_unassigned_for_task,
     board_set_note,
 )
 from app.models.department import get_all_departments
@@ -97,8 +99,8 @@ def board_view(week_start):
         logger.exception("board_view: chyba v get_absent_employees_for_dates")
         absent = {d.isoformat(): [] for d in dates}
 
-    # Unassigned: active employees who have no assignment and no full-day absence that day
-    # board structure: {date: {dept_id: [assignments]}}
+    # Unassigned: zaměstnanci bez jakéhokoliv přiřazení (ani k jedné práci) a bez absence
+    # board structure: {date: {dept_id: {task_id: {employees: [...]}}}}
     try:
         all_emps = get_all_employees(active_only=True)
         unassigned = {}
@@ -106,9 +108,10 @@ def board_view(week_start):
             ds = d.isoformat()
             absent_ids = {e['employee_id'] for e in absent.get(ds, [])}
             assigned_ids = set()
-            for dept_assignments in board.get(ds, {}).values():
-                for a in dept_assignments:
-                    assigned_ids.add(a['employee_id'])
+            for dept_tasks in board.get(ds, {}).values():
+                for task_data in dept_tasks.values():
+                    for emp in task_data['employees']:
+                        assigned_ids.add(emp['employee_id'])
             from app.models.capacity import _emp_color
             unassigned[ds] = [
                 {'employee_id': e['id'], 'name': e['name'], 'color': _emp_color(e['id'])}
@@ -148,41 +151,33 @@ def board_view(week_start):
     )
 
 
-@bp.route('/board/add-panel/<week_start>/<date_str>/<int:dept_id>')
-def board_add_panel(week_start, date_str, dept_id):
-    """HTMX panel: výběr zaměstnance pro přiřazení do oddělení."""
+@bp.route('/board/emp-panel/<week_start>/<date_str>/<int:task_id>')
+def board_emp_panel(week_start, date_str, task_id):
+    """HTMX panel: výběr zaměstnance pro přiřazení ke konkrétní práci."""
     plan_id = get_or_find_plan(week_start)
     if plan_id is None:
         plan_id = create_plan_for_week(week_start)
-
-    from app.db import get_db
-    db = get_db()
-    assigned_rows = db.execute(
-        """SELECT DISTINCT employee_id FROM assignments
-           WHERE plan_id = ? AND date = ? AND is_absence = 0""",
-        (plan_id, date_str)
-    ).fetchall()
-    assigned_ids = {r['employee_id'] for r in assigned_rows}
-
-    absent_rows = db.execute(
-        """SELECT DISTINCT employee_id FROM constraints
-           WHERE date_from <= ? AND date_to >= ?
-             AND (half_day IS NULL OR half_day = 0)""",
-        (date_str, date_str)
-    ).fetchall()
-    absent_ids = {r['employee_id'] for r in absent_rows}
-
-    from app.models.capacity import _emp_color
-    all_emps = get_all_employees(active_only=True)
-    employees = [
-        {'id': e['id'], 'name': e['name'], 'color': _emp_color(e['id'])}
-        for e in all_emps
-        if e['id'] not in assigned_ids and e['id'] not in absent_ids
-    ]
-
+    employees = get_unassigned_for_task(plan_id, date_str, task_id)
     return render_template(
         'capacity/_board_add_panel.html',
         employees=employees,
+        week_start=week_start,
+        plan_id=plan_id,
+        date_str=date_str,
+        task_id=task_id,
+    )
+
+
+@bp.route('/board/day-task-panel/<week_start>/<date_str>/<int:dept_id>')
+def board_day_task_panel(week_start, date_str, dept_id):
+    """HTMX panel: výběr práce k přidání na daný den."""
+    plan_id = get_or_find_plan(week_start)
+    if plan_id is None:
+        plan_id = create_plan_for_week(week_start)
+    tasks = get_tasks_not_on_day(plan_id, date_str, dept_id)
+    return render_template(
+        'capacity/_board_day_task_panel.html',
+        tasks=tasks,
         week_start=week_start,
         plan_id=plan_id,
         date_str=date_str,
@@ -190,33 +185,40 @@ def board_add_panel(week_start, date_str, dept_id):
     )
 
 
-@bp.route('/board/task-panel/<int:assignment_id>/<int:dept_id>')
-def board_task_panel(assignment_id, dept_id):
-    """HTMX panel: výběr práce k přidání k přiřazení zaměstnance."""
-    week_start = request.args.get('week_start', '')
-    tasks = get_available_tasks_for_assignment(assignment_id, dept_id)
-    return render_template(
-        'capacity/_board_task_panel.html',
-        assignment_id=assignment_id,
-        tasks=tasks,
-        week_start=week_start,
-    )
-
-
-@bp.route('/board/add-task', methods=['POST'])
-def board_add_task_submit():
+@bp.route('/board/assign-to-task', methods=['POST'])
+def board_assign_to_task_view():
     week_start = request.form.get('week_start', '')
-    assignment_id = request.form.get('assignment_id', type=int)
+    plan_id = request.form.get('plan_id', type=int)
+    employee_id = request.form.get('employee_id', type=int)
+    date_str = request.form.get('date_str', '')
     task_id = request.form.get('task_id', type=int)
-    if assignment_id and task_id:
-        board_add_task(assignment_id, task_id)
+    if plan_id and employee_id and date_str and task_id:
+        board_assign_to_task(plan_id, employee_id, date_str, task_id)
     return redirect(url_for('capacity.board_view', week_start=week_start))
 
 
-@bp.route('/board/remove-task/<int:bta_id>', methods=['POST'])
-def board_remove_task_view(bta_id):
+@bp.route('/board/remove-from-task/<int:bta_id>', methods=['POST'])
+def board_remove_from_task(bta_id):
     week_start = request.form.get('week_start', '')
     board_remove_task(bta_id)
+    return redirect(url_for('capacity.board_view', week_start=week_start))
+
+
+@bp.route('/board/add-day-task', methods=['POST'])
+def board_add_day_task_view():
+    week_start = request.form.get('week_start', '')
+    plan_id = request.form.get('plan_id', type=int)
+    date_str = request.form.get('date_str', '')
+    task_id = request.form.get('task_id', type=int)
+    if plan_id and date_str and task_id:
+        board_add_day_task(plan_id, date_str, task_id)
+    return redirect(url_for('capacity.board_view', week_start=week_start))
+
+
+@bp.route('/board/remove-day-task/<int:bdt_id>', methods=['POST'])
+def board_remove_day_task_view(bdt_id):
+    week_start = request.form.get('week_start', '')
+    board_remove_day_task(bdt_id)
     return redirect(url_for('capacity.board_view', week_start=week_start))
 
 
@@ -228,36 +230,6 @@ def board_set_note_view():
     if assignment_id is not None:
         board_set_note(assignment_id, note)
     return redirect(url_for('capacity.board_view', week_start=week_start))
-
-
-@bp.route('/board/assign', methods=['POST'])
-def board_assign():
-    week_start = request.form.get('week_start', '')
-    plan_id = request.form.get('plan_id', type=int)
-    employee_id = request.form.get('employee_id', type=int)
-    date_str = request.form.get('date_str', '')
-    dept_id = request.form.get('dept_id', type=int)
-
-    if plan_id and employee_id and date_str and dept_id:
-        board_assign_employee(plan_id, employee_id, date_str, dept_id)
-
-    return redirect(url_for('capacity.board_view', week_start=week_start))
-
-
-@bp.route('/board/unassign/<int:assignment_id>', methods=['POST'])
-def board_unassign(assignment_id):
-    week_start = request.form.get('week_start', '')
-    board_unassign_employee(assignment_id)
-    return redirect(url_for('capacity.board_view', week_start=week_start))
-
-
-@bp.route('/board/propsat/<week_start>', methods=['POST'])
-def board_propsat(week_start):
-    """Propíše kapacitní nástěnku do plánovače (assignments).
-    Nástěnka a plánovač sdílejí stejnou tabulku assignments,
-    takže 'propsat' = jen přesměrovat do plánovače.
-    """
-    return redirect(url_for('planner.week_view', week_start=week_start))
 
 
 @bp.route('/week/<week_start>')

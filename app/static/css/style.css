@@ -375,7 +375,7 @@ dd { color: var(--fm-text); margin-bottom: 0.75rem; }
 @media (max-width: 768px) { .page-header { flex-direction: column; gap: 0.75rem; align-items: flex-start; } .page-header h1 { font-size: 1.15rem; } .main-content { padding: 0.75rem; } }
 @media print { body { background: white; color: #111; } .sidebar, .mobile-topbar, .sidebar-overlay, .btn, .page-header .btn { display: none !important; } .main-content { margin-left: 0; padding: 0; } .card { box-shadow: none; border: 1px solid #ddd; } .planner-grid .emp-name { background: white; } .planner-grid th.day-col { background: white; } }
 
-/* ── Plánovač (board) ──────────────────────────────────────── */
+/* ── Plánovač (board) ──────────────────────────────────────────────── */
 .board-day-summary {
   display: flex; flex-wrap: wrap; gap: 0.5rem;
 }
@@ -398,88 +398,98 @@ dd { color: var(--fm-text); margin-bottom: 0.75rem; }
   border-bottom: 1px solid #e9ecef;
 }
 
-/* Employee rows */
-.board-emp-row {
-  display: flex; align-items: center; flex-wrap: wrap;
-  gap: 0.3rem; padding: 0.3rem 0 0.15rem 0.5rem;
-  border-left: 2px solid #e9ecef; margin-left: 0.1rem;
+/* Task rows */
+.board-task-row {
+  display: flex; align-items: flex-start; gap: 0.5rem;
+  padding: 0.25rem 0; border-bottom: 1px solid #f4f4f4; flex-wrap: wrap;
 }
-.board-emp-name-chip {
-  display: inline-flex; align-items: center; gap: 0.3rem;
-  padding: 0.22rem 0.55rem; border-radius: 14px;
-  font-size: 0.82rem; font-weight: 600; color: #fff;
-  white-space: nowrap; flex-shrink: 0;
-  box-shadow: 0 1px 3px rgba(0,0,0,.15);
+.board-task-label-wrap {
+  display: flex; align-items: center; gap: 0.3rem;
+  min-width: 130px; flex-shrink: 0; padding-top: 0.15rem;
 }
-.board-shift-badge {
-  font-size: 0.68rem; font-weight: 600;
-  background: rgba(0,0,0,.18); border-radius: 8px;
-  padding: 0.05rem 0.3rem; letter-spacing: .02em;
+.board-task-name {
+  font-size: 0.82rem; font-weight: 600; color: #343a40;
 }
-.board-emp-tasks {
-  display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem;
-  flex: 1;
+.board-task-count {
+  font-size: 0.7rem; background: #e9ecef; color: #6c757d;
+  border-radius: 10px; padding: 0.05rem 0.4rem; font-weight: 600;
 }
-.board-task-chip {
+.board-task-del-btn {
+  background: none; border: none; cursor: pointer;
+  font-size: 0.78rem; opacity: 0.35; padding: 0 0.1rem;
+}
+.board-task-del-btn:hover { opacity: 1; }
+.board-task-emps {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem; flex: 1;
+}
+
+/* Employee chips inside task rows */
+.board-emp-chip-wrap {
   display: inline-flex; align-items: center; gap: 0.15rem;
-  padding: 0.12rem 0.4rem; border-radius: 10px;
-  background: #fff; border: 1px solid #ced4da;
-  font-size: 0.78rem; color: #495057; white-space: nowrap;
 }
-.board-task-remove-btn {
+.board-emp-chip {
+  display: inline-flex; align-items: center; gap: 0.25rem;
+  padding: 0.18rem 0.45rem; border-radius: 5px;
+  background: #f8f9fa; border: 1px solid #dee2e6;
+  font-size: 0.8rem; white-space: nowrap;
+}
+.chip-name { font-weight: 600; color: #212529; }
+.chip-shift {
+  font-size: 0.68rem; font-weight: 700; color: #fff;
+  background: #6c757d; border-radius: 4px; padding: 0.05rem 0.28rem;
+}
+.chip-note {
+  font-size: 0.72rem; color: #6c757d; font-style: italic;
+  max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.chip-remove-btn {
   background: none; border: none; color: #adb5bd;
-  padding: 0; line-height: 1; cursor: pointer; font-size: 0.9rem;
-  font-weight: 700;
+  padding: 0; line-height: 1; cursor: pointer; font-size: 1rem; font-weight: 700;
 }
-.board-task-remove-btn:hover { color: #dc3545; }
-.board-add-task-btn {
-  display: inline-flex; align-items: center; gap: 0.15rem;
-  padding: 0.1rem 0.45rem; border-radius: 10px;
+.chip-remove-btn:hover { color: #dc3545; }
+
+/* Inline note edit */
+.chip-note-edit { display: inline-block; }
+.chip-note-edit > summary {
+  list-style: none; cursor: pointer; font-size: 0.72rem;
+  color: #adb5bd; padding: 0 0.1rem;
+}
+.chip-note-edit > summary:hover { color: #0d6efd; }
+.chip-note-edit > summary::-webkit-details-marker { display: none; }
+.chip-note-form {
+  display: flex; gap: 0.25rem; margin-top: 0.25rem;
+  position: absolute; z-index: 10;
+  background: #fff; border: 1px solid #dee2e6; border-radius: 6px;
+  padding: 0.4rem; box-shadow: 0 3px 10px rgba(0,0,0,.1);
+}
+
+/* + přidat zaměstnance inline */
+.board-add-emp-inline-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; border-radius: 50%;
   border: 1.5px dashed #adb5bd; background: none;
-  color: #6c757d; font-size: 0.75rem; cursor: pointer;
+  color: #adb5bd; font-size: 1.1rem; line-height: 1; cursor: pointer;
 }
-.board-add-task-btn:hover { border-color: #0d6efd; color: #0d6efd; }
-.board-remove-emp-btn {
-  background: none; border: none; color: #ced4da;
-  padding: 0 0.25rem; cursor: pointer; font-size: 0.9rem;
-  margin-left: auto; flex-shrink: 0;
-}
-.board-remove-emp-btn:hover { color: #dc3545; }
+.board-add-emp-inline-btn:hover { border-color: #0d6efd; color: #0d6efd; }
 
-/* Note inline edit */
-.board-emp-note-wrap {
-  font-size: 0.75rem; color: #6c757d; flex-shrink: 0;
-}
-.board-emp-note-wrap > summary {
-  list-style: none; cursor: pointer; font-style: italic;
-  padding: 0.05rem 0.3rem; border-radius: 4px;
-  white-space: nowrap; max-width: 140px; overflow: hidden; text-overflow: ellipsis;
-}
-.board-emp-note-wrap > summary:hover { background: #f0f0f0; }
-.board-emp-note-wrap > summary::-webkit-details-marker { display: none; }
-.board-note-placeholder { color: #bbb; }
-.board-note-form {
-  display: flex; gap: 0.3rem; margin-top: 0.3rem; min-width: 220px;
-}
-
-/* Add employee row */
-.board-add-emp-row { padding: 0.25rem 0 0.1rem 0.5rem; }
-.board-add-emp-btn {
+/* + přidat práci na den */
+.board-add-task-row { padding: 0.25rem 0 0.1rem; }
+.board-add-day-task-btn {
   display: inline-flex; align-items: center; gap: 0.3rem;
   padding: 0.18rem 0.6rem; border-radius: 6px;
   border: 1.5px dashed #adb5bd; background: none;
   color: #6c757d; font-size: 0.8rem; cursor: pointer;
 }
-.board-add-emp-btn:hover { border-color: #0d6efd; color: #0d6efd; }
+.board-add-day-task-btn:hover { border-color: #0d6efd; color: #0d6efd; }
 
 /* Assign panels */
 .board-assign-panel {
   background: #fff; border: 1px solid #dee2e6; border-radius: 6px;
-  padding: 0.5rem 0.6rem; margin: 0.2rem 0 0.2rem 0.5rem;
+  padding: 0.5rem 0.6rem; margin: 0.2rem 0;
   box-shadow: 0 3px 10px rgba(0,0,0,.08);
 }
 .board-assign-panel-title {
-  font-size: 0.72rem; font-weight: 600; color: #6c757d;
+  font-size: 0.7rem; font-weight: 700; color: #6c757d;
   margin-bottom: 0.3rem; text-transform: uppercase; letter-spacing: .04em;
 }
 .assign-emp-btn {
@@ -498,16 +508,11 @@ dd { color: var(--fm-text); margin-bottom: 0.75rem; }
 .assign-task-btn:hover { background: #dde6ff; }
 
 /* Unassigned + absent */
-.board-unassigned-card {
-  display: inline-flex; padding: 0.15rem 0.4rem; border-radius: 4px;
-  font-size: 0.8rem; background: #f8f9fa; color: #495057;
-  font-weight: 500; white-space: nowrap;
+.board-unassigned-chip {
+  display: inline-flex; padding: 0.12rem 0.45rem; border-radius: 5px;
+  font-size: 0.8rem; background: #f8f9fa; border: 1px solid #dee2e6;
+  color: #495057; font-weight: 500; white-space: nowrap;
 }
-.board-unassigned-arrow {
-  padding: 0.15rem 0.3rem; background: #f8f9fa; border-color: #dee2e6;
-  border-left: none; color: #6c757d;
-}
-.board-unassigned-arrow:hover { background: #e9ecef; }
 .board-absent-card {
   display: inline-flex; padding: 0.1rem 0.35rem; border-radius: 3px;
   font-size: 0.78rem; background: #fee; color: #999;

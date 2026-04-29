@@ -156,6 +156,18 @@ def _migrate_db(db):
     """)
     db.commit()
 
+    # Dynamický seznam prací viditelných v nástěnce pro daný den
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS board_day_tasks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            plan_id INTEGER NOT NULL REFERENCES weekly_plans(id) ON DELETE CASCADE,
+            date DATE NOT NULL,
+            task_id INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+            UNIQUE(plan_id, date, task_id)
+        )
+    """)
+    db.commit()
+
     # Celozávodní dovolená
     db.execute("""
         CREATE TABLE IF NOT EXISTS company_vacations (
