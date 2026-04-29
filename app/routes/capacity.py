@@ -4,8 +4,13 @@ from app.services.planner_service import get_monday, get_week_dates
 from app.models.capacity import (
     get_block_types, get_entries_for_week, save_entry, clear_entry,
     add_special_task, delete_entry, get_available_per_day,
-    get_planner_counts
+    get_planner_counts,
+    get_or_find_plan, create_plan_for_week,
+    get_board_assignments, get_absent_employees_for_dates,
+    board_assign_employee, board_unassign_employee,
 )
+from app.models.department import get_all_departments
+from app.models.employee import get_all_employees
 from app.utils.holidays import get_holidays_for_dates
 from app.models.company_vacation import get_vacation_days_map
 
@@ -18,7 +23,143 @@ DAY_NAMES_CZ = ['Po', 'Út', 'St', 'Čt', 'Pá', 'So', 'Ne']
 @bp.route('/')
 def index():
     monday = get_monday()
-    return redirect(url_for('capacity.week_view', week_start=monday.isoformat()))
+    return redirect(url_for('capacity.board_index'))
+
+
+# ── Board view ────────────────────────────────────────────────────────────────
+
+@bp.route('/board')
+def board_index():
+    monday = get_monday()
+    return redirect(url_for('capacity.board_view', week_start=monday.isoformat()))
+
+
+@bp.route('/board/<week_start>')
+def board_view(week_start):
+    parts = week_start.split('-')
+    ws = date(int(parts[0]), int(parts[1]), int(parts[2]))
+    ws = ws - timedelta(days=ws.weekday())
+    week_start = ws.isoformat()
+
+    all_dates = get_week_dates(week_start)
+    dates = all_dates[:5]  # Po–Pá only
+
+    prev_week = (ws - timedelta(weeks=1)).isoformat()
+    next_week = (ws + timedelta(weeks=1)).isoformat()
+    today_week = get_monday().isoformat()
+
+    holiday_map = get_holidays_for_dates(dates)
+    vacation_map = get_vacation_days_map(dates)
+
+    # Plan
+    plan_id = get_or_find_plan(week_start)
+    if plan_id is None:
+        plan_id = create_plan_for_week(week_start)
+
+    # Departments split by work_plan
+    all_depts = get_all_departments(active_only=True)
+    vyroba_depts = [d for d in all_depts if d['work_plan'] == 1]
+    expedice_depts = [d for d in all_depts if d['work_plan'] == 0]
+
+    # Board assignments
+    board = get_board_assignments(plan_id, dates)
+
+    # Absences
+    absent = get_absent_employees_for_dates(dates)
+
+    # Unassigned: active employees who have no assignment and no full-day absence that day
+    all_emps = get_all_employees(active_only=True)
+    unassigned = {}
+    for d in dates:
+        ds = d.isoformat()
+        absent_ids = {e['employee_id'] for e in absent.get(ds, [])}
+        # collect all assigned employee_ids for this day
+        assigned_ids = set()
+        for dept_assignments in board.get(ds, {}).values():
+            for a in dept_assignments:
+                assigned_ids.add(a['employee_id'])
+        unassigned[ds] = [
+            {'employee_id': e['id'], 'name': e['name'], 'color': e['color']}
+            for e in all_emps
+            if e['id'] not in assigned_ids and e['id'] not in absent_ids
+        ]
+
+    return render_template(
+        'capacity/board.html',
+        week_start=week_start,
+        dates=dates,
+        prev_week=prev_week,
+        next_week=next_week,
+        today_week=today_week,
+        plan_id=plan_id,
+        vyroba_depts=vyroba_depts,
+        expedice_depts=expedice_depts,
+        board=board,
+        absent=absent,
+        unassigned=unassigned,
+        holiday_map=holiday_map,
+        vacation_map=vacation_map,
+        day_names=DAY_NAMES_CZ,
+    )
+
+
+@bp.route('/board/add-panel/<week_start>/<date_str>/<int:dept_id>')
+def board_add_panel(week_start, date_str, dept_id):
+    plan_id = get_or_find_plan(week_start)
+    if plan_id is None:
+        plan_id = create_plan_for_week(week_start)
+
+    # Already assigned on this day (any dept)
+    from app.db import get_db
+    db = get_db()
+    assigned_rows = db.execute(
+        """SELECT DISTINCT employee_id FROM assignments
+           WHERE plan_id = ? AND date = ? AND is_absence = 0""",
+        (plan_id, date_str)
+    ).fetchall()
+    assigned_ids = {r['employee_id'] for r in assigned_rows}
+
+    # Full-day absences on this day
+    absent_rows = db.execute(
+        """SELECT DISTINCT employee_id FROM constraints
+           WHERE date_from <= ? AND date_to >= ?
+             AND (half_day IS NULL OR half_day = 0)""",
+        (date_str, date_str)
+    ).fetchall()
+    absent_ids = {r['employee_id'] for r in absent_rows}
+
+    all_emps = get_all_employees(active_only=True)
+    employees = [e for e in all_emps if e['id'] not in assigned_ids and e['id'] not in absent_ids]
+
+    return render_template(
+        'capacity/_board_add_panel.html',
+        employees=employees,
+        week_start=week_start,
+        plan_id=plan_id,
+        date_str=date_str,
+        dept_id=dept_id,
+    )
+
+
+@bp.route('/board/assign', methods=['POST'])
+def board_assign():
+    week_start = request.form.get('week_start', '')
+    plan_id = request.form.get('plan_id', type=int)
+    employee_id = request.form.get('employee_id', type=int)
+    date_str = request.form.get('date_str', '')
+    dept_id = request.form.get('dept_id', type=int)
+
+    if plan_id and employee_id and date_str and dept_id:
+        board_assign_employee(plan_id, employee_id, date_str, dept_id)
+
+    return redirect(url_for('capacity.board_view', week_start=week_start))
+
+
+@bp.route('/board/unassign/<int:assignment_id>', methods=['POST'])
+def board_unassign(assignment_id):
+    week_start = request.form.get('week_start', '')
+    board_unassign_employee(assignment_id)
+    return redirect(url_for('capacity.board_view', week_start=week_start))
 
 
 @bp.route('/week/<week_start>')

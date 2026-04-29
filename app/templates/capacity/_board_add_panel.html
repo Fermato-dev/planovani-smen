@@ -1,0 +1,20 @@
+<div class="board-assign-panel">
+  {% if employees %}
+  <div class="d-flex flex-wrap gap-1 mb-1">
+    {% for e in employees %}
+    <form method="POST" action="{{ url_for('capacity.board_assign') }}" class="d-inline">
+      <input type="hidden" name="week_start" value="{{ week_start }}">
+      <input type="hidden" name="plan_id" value="{{ plan_id }}">
+      <input type="hidden" name="date_str" value="{{ date_str }}">
+      <input type="hidden" name="dept_id" value="{{ dept_id }}">
+      <input type="hidden" name="employee_id" value="{{ e.id }}">
+      <button type="submit" class="assign-emp-btn" style="background:#{{ e.color }}">{{ e.name }}</button>
+    </form>
+    {% endfor %}
+  </div>
+  {% else %}
+  <small class="text-muted">Žádní volní zaměstnanci</small>
+  {% endif %}
+  <button type="button" class="btn btn-link text-muted p-0" style="font-size:0.75rem;"
+    onclick="document.getElementById('add-panel-{{ date_str }}-{{ dept_id }}').innerHTML=''">zavřít</button>
+</div>

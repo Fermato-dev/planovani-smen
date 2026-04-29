@@ -138,6 +138,114 @@ def delete_entry(entry_id):
     db.commit()
 
 
+def get_or_find_plan(week_start):
+    """Vrátí plan_id pro daný týden nebo None."""
+    db = get_db()
+    row = db.execute(
+        "SELECT id FROM weekly_plans WHERE week_start = ?", (week_start,)
+    ).fetchone()
+    return row['id'] if row else None
+
+
+def create_plan_for_week(week_start):
+    """Vytvoří nový weekly_plan a vrátí id."""
+    from datetime import date as _date
+    parts = week_start.split('-')
+    ws = _date(int(parts[0]), int(parts[1]), int(parts[2]))
+    iso = ws.isocalendar()
+    week_number = iso[1]
+    year = iso[0]
+    db = get_db()
+    cur = db.execute(
+        "INSERT INTO weekly_plans (week_start, week_number, year) VALUES (?, ?, ?)",
+        (week_start, week_number, year)
+    )
+    db.commit()
+    return cur.lastrowid
+
+
+def get_board_assignments(plan_id, dates):
+    """Vrátí {date_str: {dept_id: [{'assignment_id':..,'employee_id':..,'name':..,'color':..}]}}"""
+    db = get_db()
+    result = {}
+    for d in dates:
+        ds = d.isoformat()
+        result[ds] = {}
+
+    rows = db.execute(
+        """SELECT a.id as assignment_id, a.employee_id, a.department_id,
+                  CAST(a.date AS TEXT) as date_str,
+                  e.name, e.color
+           FROM assignments a
+           JOIN employees e ON e.id = a.employee_id
+           WHERE a.plan_id = ? AND a.is_absence = 0
+             AND a.date IN ({})
+        """.format(','.join('?' for _ in dates)),
+        [plan_id] + [d.isoformat() for d in dates]
+    ).fetchall()
+
+    for r in rows:
+        ds = str(r['date_str'])
+        dept_id = r['department_id']
+        if ds not in result:
+            result[ds] = {}
+        if dept_id not in result[ds]:
+            result[ds][dept_id] = []
+        result[ds][dept_id].append({
+            'assignment_id': r['assignment_id'],
+            'employee_id': r['employee_id'],
+            'name': r['name'],
+            'color': r['color'],
+        })
+    return result
+
+
+def get_absent_employees_for_dates(dates):
+    """Vrátí {date_str: [{'employee_id':..,'name':..,'color':..}]} pro CELODENNÍ absence (half_day=0 nebo NULL)."""
+    db = get_db()
+    result = {}
+    for d in dates:
+        ds = d.isoformat()
+        rows = db.execute(
+            """SELECT e.id as employee_id, e.name, e.color
+               FROM constraints c
+               JOIN employees e ON e.id = c.employee_id
+               WHERE c.date_from <= ? AND c.date_to >= ?
+                 AND (c.half_day IS NULL OR c.half_day = 0)
+                 AND e.active = 1
+               ORDER BY e.name""",
+            (ds, ds)
+        ).fetchall()
+        result[ds] = [{'employee_id': r['employee_id'], 'name': r['name'], 'color': r['color']} for r in rows]
+    return result
+
+
+def board_assign_employee(plan_id, employee_id, date_str, dept_id):
+    """Přiřadí zaměstnance do oddělení na datum. Pokud přiřazení již existuje, nic nedělá. Vrátí assignment_id."""
+    db = get_db()
+    existing = db.execute(
+        """SELECT id FROM assignments
+           WHERE plan_id = ? AND employee_id = ? AND date = ? AND is_absence = 0""",
+        (plan_id, employee_id, date_str)
+    ).fetchone()
+    if existing:
+        return existing['id']
+    cur = db.execute(
+        """INSERT INTO assignments (plan_id, employee_id, date, department_id, is_absence)
+           VALUES (?, ?, ?, ?, 0)""",
+        (plan_id, employee_id, date_str, dept_id)
+    )
+    db.commit()
+    return cur.lastrowid
+
+
+def board_unassign_employee(assignment_id):
+    """Smaže přiřazení."""
+    db = get_db()
+    db.execute("DELETE FROM assignments WHERE id = ?", (assignment_id,))
+    db.commit()
+
+
 def get_available_per_day(dates):
     """Returns dict: date_str -> {total, absent_full, absent_half, available, is_vacation}
     Půldenní absence (half_day=1) se počítají jako 0.5.

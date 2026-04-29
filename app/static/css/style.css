@@ -374,3 +374,24 @@ dd { color: var(--fm-text); margin-bottom: 0.75rem; }
 @media (max-width: 992px) { .sidebar { transform: translateX(-100%); } .sidebar.open { transform: translateX(0); } .sidebar-overlay.show { display: block; } .main-content { margin-left: 0; padding: 1rem; } .mobile-topbar { display: flex; } }
 @media (max-width: 768px) { .page-header { flex-direction: column; gap: 0.75rem; align-items: flex-start; } .page-header h1 { font-size: 1.15rem; } .main-content { padding: 0.75rem; } }
 @media print { body { background: white; color: #111; } .sidebar, .mobile-topbar, .sidebar-overlay, .btn, .page-header .btn { display: none !important; } .main-content { margin-left: 0; padding: 0; } .card { box-shadow: none; border: 1px solid #ddd; } .planner-grid .emp-name { background: white; } .planner-grid th.day-col { background: white; } }
+
+/* ── Kapacitní nástěnka (board) ──────────────────────────── */
+.board-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.board-dept-col { width: 130px; min-width: 130px; font-weight: 600; background: var(--fm-surface, #fff); position: sticky; left: 0; z-index: 2; border: 1px solid var(--fm-border); padding: 0.4rem 0.5rem; vertical-align: top; }
+.board-day-col { min-width: 150px; text-align: center; border: 1px solid var(--fm-border); padding: 0.35rem 0.4rem; background: var(--fm-bg-raised); }
+.board-col-holiday { background: #fff8e1 !important; }
+.board-col-vacation { background: #e8f5e9 !important; }
+.board-cell { border: 1px solid var(--fm-border); padding: 0.35rem 0.4rem; vertical-align: top; min-width: 150px; }
+.board-section-row td { background: var(--fm-primary); color: #fff; font-size: 0.78rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; padding: 0.25rem 0.5rem; }
+.board-emp-card { display: inline-flex; align-items: center; gap: 0.2rem; padding: 0.1rem 0.3rem 0.1rem 0.4rem; border-radius: 3px; font-size: 0.78rem; font-weight: 500; color: #fff; margin: 0.1rem 0.1rem 0.1rem 0; white-space: nowrap; vertical-align: middle; }
+.board-remove-btn { background: none; border: none; color: rgba(255,255,255,0.75); padding: 0 0 0 0.15rem; line-height: 1; cursor: pointer; font-size: 0.9rem; font-weight: 700; }
+.board-remove-btn:hover { color: #fff; }
+.board-add-btn { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; border: 1px dashed var(--fm-text-muted); background: none; color: var(--fm-text-muted); font-size: 0.9rem; line-height: 1; cursor: pointer; padding: 0; margin: 0.1rem; vertical-align: middle; }
+.board-add-btn:hover { border-color: var(--fm-primary); color: var(--fm-primary); background: rgba(13,148,136,0.06); }
+.board-assign-panel { background: var(--fm-bg-card, #fff); border: 1px solid var(--fm-border); border-radius: 4px; padding: 0.4rem; margin-top: 0.25rem; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+.assign-emp-btn { display: inline-flex; align-items: center; padding: 0.1rem 0.35rem; border-radius: 3px; font-size: 0.78rem; font-weight: 500; color: #fff; margin: 0.1rem; border: none; cursor: pointer; }
+.assign-emp-btn:hover { filter: brightness(0.9); }
+.board-unassigned-row td { background: #fafafa; }
+.board-unassigned-card { display: inline-flex; padding: 0.1rem 0.35rem; border-radius: 3px; font-size: 0.78rem; background: #f0f0f0; color: #555; margin: 0.1rem; }
+.board-absence-row td { background: #fff8f8; }
+.board-absent-card { display: inline-flex; padding: 0.1rem 0.35rem; border-radius: 3px; font-size: 0.78rem; background: #fee; color: #999; margin: 0.1rem; text-decoration: line-through; }
