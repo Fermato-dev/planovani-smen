@@ -164,6 +164,21 @@ def create_plan_for_week(week_start):
     return cur.lastrowid
 
 
+# Paleta barev pro kartičky zaměstnanců (generuje se z employee_id)
+_BOARD_EMP_COLORS = [
+    '2e7d32', '1565c0', '6a1b9a', 'c62828', 'e65100', '00838f',
+    '558b2f', '0277bd', '4527a0', 'ad1457', '00695c', '37474f',
+    'f9a825', '4e342e', '0d47a1', '1b5e20',
+]
+
+
+def _emp_color(emp_id):
+    """Konzistentní barva zaměstnance z jeho ID (bez sloupce color v DB)."""
+    if not emp_id:
+        return 'aaaaaa'
+    return _BOARD_EMP_COLORS[(int(emp_id) - 1) % len(_BOARD_EMP_COLORS)]
+
+
 def get_board_assignments(plan_id, dates):
     """Vrátí {date_str: {dept_id: [{'assignment_id':..,'employee_id':..,'name':..,'color':..}]}}"""
     db = get_db()
@@ -175,7 +190,7 @@ def get_board_assignments(plan_id, dates):
     rows = db.execute(
         """SELECT a.id as assignment_id, a.employee_id, a.department_id,
                   CAST(a.date AS TEXT) as date_str,
-                  e.name, e.color
+                  e.name
            FROM assignments a
            JOIN employees e ON e.id = a.employee_id
            WHERE a.plan_id = ? AND a.is_absence = 0
@@ -195,7 +210,7 @@ def get_board_assignments(plan_id, dates):
             'assignment_id': r['assignment_id'],
             'employee_id': r['employee_id'],
             'name': r['name'],
-            'color': r['color'],
+            'color': _emp_color(r['employee_id']),
         })
     return result
 
@@ -215,7 +230,7 @@ def get_absent_employees_for_dates(dates):
     for d in dates:
         ds = d.isoformat()
         rows = db.execute(
-            f"""SELECT e.id as employee_id, e.name, e.color
+            f"""SELECT e.id as employee_id, e.name
                FROM constraints c
                JOIN employees e ON e.id = c.employee_id
                WHERE c.date_from <= ? AND c.date_to >= ?
@@ -224,7 +239,7 @@ def get_absent_employees_for_dates(dates):
                ORDER BY e.name""",
             (ds, ds)
         ).fetchall()
-        result[ds] = [{'employee_id': r['employee_id'], 'name': r['name'], 'color': r['color'] or 'aaaaaa'} for r in rows]
+        result[ds] = [{'employee_id': r['employee_id'], 'name': r['name'], 'color': _emp_color(r['employee_id'])} for r in rows]
     return result
 
 

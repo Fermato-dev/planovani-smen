@@ -39,15 +39,6 @@ def board_index():
 
 @bp.route('/board/<week_start>')
 def board_view(week_start):
-    import traceback as _tb
-    try:
-        return _board_view_impl(week_start)
-    except Exception as exc:
-        logger.exception("board_view FAILED")
-        return f"<pre style='color:red;padding:2rem'><b>{type(exc).__name__}: {exc}</b>\n\n{_tb.format_exc()}</pre>", 500
-
-
-def _board_view_impl(week_start):
     parts = week_start.split('-')
     ws = date(int(parts[0]), int(parts[1]), int(parts[2]))
     ws = ws - timedelta(days=ws.weekday())
@@ -115,8 +106,9 @@ def _board_view_impl(week_start):
             for dept_assignments in board.get(ds, {}).values():
                 for a in dept_assignments:
                     assigned_ids.add(a['employee_id'])
+            from app.models.capacity import _emp_color
             unassigned[ds] = [
-                {'employee_id': e['id'], 'name': e['name'], 'color': e['color'] or 'aaaaaa'}
+                {'employee_id': e['id'], 'name': e['name'], 'color': _emp_color(e['id'])}
                 for e in all_emps
                 if e['id'] not in assigned_ids and e['id'] not in absent_ids
             ]
