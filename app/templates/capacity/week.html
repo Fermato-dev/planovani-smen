@@ -65,16 +65,25 @@
                         {% endfor %}
                     </tr>
                     <tr>
-                        <td class="cap-label text-muted">Absence / dovolená</td>
+                        <td class="cap-label text-muted">
+                            Absence / dovolená
+                            <small class="d-block text-muted" style="font-size:0.65rem;">půl dne = 0,5</small>
+                        </td>
                         {% for d in dates %}
                         {% set ds = d.isoformat() %}
                         <td class="text-center cap-cell" data-date="{{ ds }}">
                             {% if available[ds].is_vacation %}
                             <span class="cap-static text-warning">celoz.</span>
                             {% else %}
-                            <span class="cap-static text-danger">
-                                {% if available[ds].absent > 0 %}-{{ available[ds].absent }}{% else %}0{% endif %}
+                            {% set absent = available[ds].absent_display %}
+                            <span class="cap-static {% if absent > 0 %}text-danger{% else %}text-muted{% endif %}">
+                                {% if absent > 0 %}-{{ absent | int if absent == (absent | int) else absent }}{% else %}0{% endif %}
                             </span>
+                            {% if available[ds].absent_half > 0 %}
+                            <small class="d-block text-muted" style="font-size:0.65rem;" title="{{ available[ds].absent_half }} půldenní">
+                                ({{ available[ds].absent_half }}× ½)
+                            </small>
+                            {% endif %}
                             {% endif %}
                         </td>
                         {% endfor %}
@@ -110,21 +119,60 @@
                     {% if fixed_types %}
                     {% for bt in fixed_types %}
                     <tr class="cap-fixed-row" data-block-id="{{ bt.id }}">
-                        <td class="cap-label">{{ bt.name }}</td>
+                        <td class="cap-label">
+                            {{ bt.name }}
+                            {% if bt.department_id %}
+                            <small class="d-block text-muted" style="font-size:0.65rem;">
+                                <i class="bi bi-calendar3"></i> z rozpisu
+                            </small>
+                            {% endif %}
+                        </td>
                         {% for d in dates %}
                         {% set ds = d.isoformat() %}
-                        {% set val = fixed_demand.get((ds, bt.id), 0) %}
+                        {% set has_override = (ds, bt.id) in fixed_demand %}
+                        {% set manual_val = fixed_demand.get((ds, bt.id), 0) %}
+                        {% set auto_val = planner_counts.get((ds, bt.id), 0) %}
+                        {# Efektivní hodnota: manuální přepis má přednost, jinak auto z rozpisu #}
+                        {% set eff_val = manual_val if has_override else auto_val %}
                         <td class="text-center cap-cell">
-                            <input type="number" min="0" class="cap-input cap-fixed-input"
-                                data-week-start="{{ week_start }}"
-                                data-date="{{ ds }}"
-                                data-block-id="{{ bt.id }}"
-                                data-category="fixed"
-                                value="{{ val }}"
-                                hx-post="{{ url_for('capacity.save') }}"
-                                hx-trigger="change"
-                                hx-vals='js:{week_start:this.dataset.weekStart,date:this.dataset.date,block_type_id:this.dataset.blockId,count:this.value,category:this.dataset.category}'
-                                hx-swap="none">
+                            {% if bt.department_id and not has_override %}
+                            {# Auto z plánovače — zobrazit číslo s tlačítkem přepsat #}
+                            <span class="cap-auto-val cap-fixed-input"
+                                  data-date="{{ ds }}" data-block-id="{{ bt.id }}"
+                                  data-auto="{{ auto_val }}">
+                                {{ auto_val }}
+                            </span>
+                            <button class="btn cap-override-btn"
+                                    title="Přepsat ručně"
+                                    onclick="startOverride(this, '{{ ds }}', '{{ bt.id }}', {{ auto_val }}, '{{ week_start }}', 'fixed')">
+                                <i class="bi bi-pencil-fill"></i>
+                            </button>
+                            {% else %}
+                            {# Manuální vstup (nebo blok bez napojení na oddělení) #}
+                            <div class="d-flex align-items-center justify-content-center gap-1">
+                                <input type="number" min="0" class="cap-input cap-fixed-input"
+                                    data-week-start="{{ week_start }}"
+                                    data-date="{{ ds }}"
+                                    data-block-id="{{ bt.id }}"
+                                    data-category="fixed"
+                                    value="{{ eff_val }}"
+                                    hx-post="{{ url_for('capacity.save') }}"
+                                    hx-trigger="change"
+                                    hx-vals='js:{week_start:this.dataset.weekStart,date:this.dataset.date,block_type_id:this.dataset.blockId,count:this.value,category:this.dataset.category}'
+                                    hx-swap="none">
+                                {% if bt.department_id and has_override %}
+                                {# Tlačítko pro návrat k auto hodnotě #}
+                                <form method="POST" action="{{ url_for('capacity.clear_override') }}" class="d-inline">
+                                    <input type="hidden" name="week_start" value="{{ week_start }}">
+                                    <input type="hidden" name="date" value="{{ ds }}">
+                                    <input type="hidden" name="block_type_id" value="{{ bt.id }}">
+                                    <button type="submit" class="btn cap-reset-btn" title="Obnovit z rozpisu (auto: {{ auto_val }})">
+                                        <i class="bi bi-arrow-counterclockwise"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
+                            {% endif %}
                         </td>
                         {% endfor %}
                     </tr>
@@ -269,6 +317,36 @@
 {% block extra_js %}
 <script>
 (function() {
+    // ---- Override auto-value ----
+    window.startOverride = function(btn, ds, blockId, autoVal, weekStart, category) {
+        var cell = btn.parentElement;
+        // Replace static display with an editable input
+        cell.innerHTML =
+            '<div class="d-flex align-items-center justify-content-center gap-1">' +
+            '<input type="number" min="0" class="cap-input cap-fixed-input" ' +
+            '  data-week-start="' + weekStart + '" data-date="' + ds + '" ' +
+            '  data-block-id="' + blockId + '" data-category="' + category + '" ' +
+            '  value="' + autoVal + '" ' +
+            '  hx-post="/capacity/save" hx-trigger="change" hx-swap="none" ' +
+            '  hx-vals=\'js:{week_start:this.dataset.weekStart,date:this.dataset.date,block_type_id:this.dataset.blockId,count:this.value,category:this.dataset.category}\'>' +
+            '<button type="button" class="btn cap-reset-btn" title="Obnovit z rozpisu" ' +
+            '  onclick="resetToAuto(this,\'' + ds + '\',\'' + blockId + '\',\'' + weekStart + '\')">' +
+            '<i class="bi bi-arrow-counterclockwise"></i></button>' +
+            '</div>';
+        htmx.process(cell);
+        cell.querySelector('input').focus();
+        recalcCol(ds);
+    };
+
+    window.resetToAuto = function(btn, ds, blockId, weekStart) {
+        // POST to clear the override, then reload page to refresh auto values
+        fetch('/capacity/clear-override', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: 'week_start=' + weekStart + '&date=' + ds + '&block_type_id=' + blockId
+        }).then(function() { location.reload(); });
+    };
+
     // ---- Special modal ----
     var _currentSpecialDate = null;
     window.openSpecialModal = function(dsnodash) {

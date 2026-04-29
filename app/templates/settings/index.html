@@ -495,6 +495,7 @@
                             <thead>
                                 <tr>
                                     <th>Název</th>
+                                    <th>Napojit na oddělení</th>
                                     <th></th>
                                 </tr>
                             </thead>
@@ -502,6 +503,22 @@
                             {% for bt in capacity_block_types if bt.category == 'fixed' %}
                                 <tr>
                                     <td>{{ bt.name }}</td>
+                                    <td>
+                                        <form method="POST" action="{{ url_for('settings.capacity_block_link', block_id=bt.id) }}"
+                                              class="d-flex align-items-center gap-1">
+                                            <select name="department_id" class="form-select form-select-sm"
+                                                    style="max-width:140px;"
+                                                    onchange="this.form.submit()">
+                                                <option value="">— bez napojení —</option>
+                                                {% for dept in departments if dept.active %}
+                                                <option value="{{ dept.id }}"
+                                                    {{ 'selected' if bt.department_id == dept.id }}>
+                                                    {{ dept.name }}
+                                                </option>
+                                                {% endfor %}
+                                            </select>
+                                        </form>
+                                    </td>
                                     <td class="text-end">
                                         <form method="POST" action="{{ url_for('settings.capacity_block_delete', block_id=bt.id) }}" class="d-inline"
                                               onsubmit="return confirm('Smazat blok {{ bt.name }}? Všechna data pro tento blok budou smazána.')">
@@ -513,7 +530,7 @@
                                 </tr>
                             {% else %}
                                 <tr>
-                                    <td colspan="2" class="text-center text-muted py-3">
+                                    <td colspan="3" class="text-center text-muted py-3">
                                         Žádné fixní odečty. Přidejte první (např. VEDS, Vývoj, VINAcz).
                                     </td>
                                 </tr>

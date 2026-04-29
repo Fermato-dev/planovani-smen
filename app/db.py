@@ -183,6 +183,20 @@ def _migrate_db(db):
     """)
     db.commit()
 
+    # Půldenní absence – příznak v constraints
+    if 'constraints' in tables:
+        c_cols = [r[1] for r in db.execute("PRAGMA table_info(constraints)").fetchall()]
+        if 'half_day' not in c_cols:
+            db.execute("ALTER TABLE constraints ADD COLUMN half_day INTEGER DEFAULT 0")
+            db.commit()
+
+    # Vazba fixního bloku na oddělení (pro auto-načítání z rozpisu)
+    if 'capacity_block_types' in tables:
+        bt_cols = [r[1] for r in db.execute("PRAGMA table_info(capacity_block_types)").fetchall()]
+        if 'department_id' not in bt_cols:
+            db.execute("ALTER TABLE capacity_block_types ADD COLUMN department_id INTEGER DEFAULT NULL")
+            db.commit()
+
     # Auto-create default admin if no users exist
     user_count = db.execute("SELECT COUNT(*) FROM users").fetchone()[0]
     if user_count == 0:

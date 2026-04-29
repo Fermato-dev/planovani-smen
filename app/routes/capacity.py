@@ -2,8 +2,9 @@ from datetime import date, timedelta
 from flask import Blueprint, render_template, request, redirect, url_for, flash, make_response
 from app.services.planner_service import get_monday, get_week_dates
 from app.models.capacity import (
-    get_block_types, get_entries_for_week, save_entry,
-    add_special_task, delete_entry, get_available_per_day
+    get_block_types, get_entries_for_week, save_entry, clear_entry,
+    add_special_task, delete_entry, get_available_per_day,
+    get_planner_counts
 )
 from app.utils.holidays import get_holidays_for_dates
 from app.models.company_vacation import get_vacation_days_map
@@ -39,6 +40,8 @@ def week_view(week_start):
     available = get_available_per_day(dates)
     holiday_map = get_holidays_for_dates(dates)
     vacation_map = get_vacation_days_map(dates)
+    # Auto-počty z plánovače pro bloky napojené na oddělení
+    planner_counts = get_planner_counts(week_start, dates, fixed_types)
 
     return render_template(
         'capacity/week.html',
@@ -50,6 +53,7 @@ def week_view(week_start):
         fixed_types=fixed_types,
         demand_types=demand_types,
         fixed_demand=fixed_demand,
+        planner_counts=planner_counts,
         special=special,
         available=available,
         holiday_map=holiday_map,
@@ -70,6 +74,18 @@ def save():
         count_int = int(count) if count else 0
         block_id_int = int(block_type_id)
         save_entry(week_start, date_str, category, block_id_int, count_int)
+    except (ValueError, Exception):
+        return '', 400
+
+
+@bp.route('/clear-override', methods=['POST'])
+def clear_override():
+    """Smaže manuální přepis — vrátí se auto-hodnota z plánovače."""
+    week_start = request.form.get('week_start', '')
+    date_str = request.form.get('date', '')
+    block_type_id = request.form.get('block_type_id', '')
+    try:
+        clear_entry(week_start, date_str, int(block_type_id))
     except (ValueError, Exception):
         return '', 400
 

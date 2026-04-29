@@ -45,13 +45,13 @@ def get_constraint(constraint_id):
     ).fetchone()
 
 
-def create_constraint(employee_id, date_from, date_to, type, subtype='', note=''):
+def create_constraint(employee_id, date_from, date_to, type, subtype='', note='', half_day=0):
     """Create a new constraint. Returns new ID."""
     db = get_db()
     cursor = db.execute(
-        """INSERT INTO constraints (employee_id, date_from, date_to, type, subtype, note)
-           VALUES (?, ?, ?, ?, ?, ?)""",
-        (employee_id, date_from, date_to, type, subtype, note)
+        """INSERT INTO constraints (employee_id, date_from, date_to, type, subtype, note, half_day)
+           VALUES (?, ?, ?, ?, ?, ?, ?)""",
+        (employee_id, date_from, date_to, type, subtype, note, half_day)
     )
     db.commit()
     return cursor.lastrowid

@@ -235,6 +235,9 @@
                                 {% if val == c.type %}{{ label }}{% endif %}
                             {% endfor %}
                         </span>
+                        {% if c.half_day %}
+                        <span class="badge bg-warning text-dark ms-1" title="Půldenní absence">½</span>
+                        {% endif %}
                     </td>
                     <td>{{ c.date_from|czdate }}</td>
                     <td>{{ c.date_to|czdate }}</td>
@@ -314,6 +317,12 @@
                         <label class="form-label">Poznámka</label>
                         <textarea name="note" class="form-control" rows="2"></textarea>
                     </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" name="half_day" value="1" id="addHalfDay">
+                        <label class="form-check-label" for="addHalfDay">
+                            Půldenní absence <small class="text-muted">(počítá se jako 0,5 dne)</small>
+                        </label>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Zrušit</button>
@@ -370,6 +379,13 @@
                     <div class="mb-3">
                         <label class="form-label">Poznámka</label>
                         <textarea name="note" class="form-control" rows="2">{{ c.note or '' }}</textarea>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" name="half_day" value="1"
+                               id="editHalfDay{{ c.id }}" {{ 'checked' if c.half_day }}>
+                        <label class="form-check-label" for="editHalfDay{{ c.id }}">
+                            Půldenní absence <small class="text-muted">(počítá se jako 0,5 dne)</small>
+                        </label>
                     </div>
                 </div>
                 <div class="modal-footer">

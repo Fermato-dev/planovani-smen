@@ -13,7 +13,7 @@ from app.models.app_settings import get_smtp_settings, save_smtp_settings, get_s
 from app.models.task_requirement import (
     get_all_requirements, get_requirement, create_requirement, update_requirement, delete_requirement
 )
-from app.models.capacity import get_all_block_types, create_block_type, delete_block_type
+from app.models.capacity import get_all_block_types, create_block_type, delete_block_type, update_block_type
 
 bp = Blueprint('settings', __name__, url_prefix='/settings')
 
@@ -251,6 +251,17 @@ def capacity_block_add():
     try:
         create_block_type(category, name)
         flash(f'Blok "{name}" přidán.', 'success')
+    except Exception as e:
+        flash(f'Chyba: {e}', 'error')
+    return redirect(url_for('settings.index', tab='capacity'))
+
+
+@bp.route('/capacity-block/<int:block_id>/link', methods=['POST'])
+def capacity_block_link(block_id):
+    department_id = request.form.get('department_id', '').strip()
+    dept_id = int(department_id) if department_id else None
+    try:
+        update_block_type(block_id, dept_id)
     except Exception as e:
         flash(f'Chyba: {e}', 'error')
     return redirect(url_for('settings.index', tab='capacity'))

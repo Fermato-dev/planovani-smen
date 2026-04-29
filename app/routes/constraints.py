@@ -81,8 +81,9 @@ def add():
         flash('Datum "do" nesmí být před datem "od".', 'error')
         return redirect(url_for('constraints.index'))
 
+    half_day = 1 if request.form.get('half_day') == '1' else 0
     try:
-        create_constraint(employee_id, date_from, date_to, type_, note=note)
+        create_constraint(employee_id, date_from, date_to, type_, note=note, half_day=half_day)
         flash('Omezení přidáno.', 'success')
     except Exception as e:
         flash(f'Chyba: {e}', 'error')
@@ -102,12 +103,14 @@ def edit(constraint_id):
         flash('Datum "do" nesmí být před datem "od".', 'error')
         return redirect(url_for('constraints.index'))
 
+    half_day = 1 if request.form.get('half_day') == '1' else 0
     update_constraint(constraint_id,
                       employee_id=employee_id,
                       date_from=date_from,
                       date_to=date_to,
                       type=type_,
-                      note=note)
+                      note=note,
+                      half_day=half_day)
     flash('Omezení aktualizováno.', 'success')
     return redirect(url_for('constraints.index'))
 

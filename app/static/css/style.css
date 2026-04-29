@@ -345,6 +345,32 @@ dd { color: var(--fm-text); margin-bottom: 0.75rem; }
 .cap-special-btn { font-size: 0.75rem; padding: 0.15rem 0.4rem; }
 .btn-xs { font-size: 0.75rem; padding: 0.15rem 0.4rem; line-height: 1.4; border-radius: var(--fm-radius-sm); }
 
+/* Auto-hodnota z plánovače */
+.cap-auto-val {
+    font-weight: 600;
+    color: var(--fm-primary);
+    font-size: 0.95rem;
+}
+.cap-override-btn {
+    font-size: 0.6rem;
+    padding: 0.1rem 0.25rem;
+    color: var(--fm-text-muted);
+    border: none;
+    background: none;
+    opacity: 0.5;
+    line-height: 1;
+}
+.cap-override-btn:hover { opacity: 1; color: var(--fm-primary); }
+.cap-reset-btn {
+    font-size: 0.65rem;
+    padding: 0.1rem 0.25rem;
+    color: var(--fm-text-muted);
+    border: none;
+    background: none;
+    line-height: 1;
+}
+.cap-reset-btn:hover { color: var(--fm-primary); }
+
 @media (max-width: 992px) { .sidebar { transform: translateX(-100%); } .sidebar.open { transform: translateX(0); } .sidebar-overlay.show { display: block; } .main-content { margin-left: 0; padding: 1rem; } .mobile-topbar { display: flex; } }
 @media (max-width: 768px) { .page-header { flex-direction: column; gap: 0.75rem; align-items: flex-start; } .page-header h1 { font-size: 1.15rem; } .main-content { padding: 0.75rem; } }
 @media print { body { background: white; color: #111; } .sidebar, .mobile-topbar, .sidebar-overlay, .btn, .page-header .btn { display: none !important; } .main-content { margin-left: 0; padding: 0; } .card { box-shadow: none; border: 1px solid #ddd; } .planner-grid .emp-name { background: white; } .planner-grid th.day-col { background: white; } }
