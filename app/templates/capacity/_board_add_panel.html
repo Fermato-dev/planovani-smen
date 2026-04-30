@@ -16,6 +16,24 @@
   {% else %}
   <small class="text-muted">Žádní dostupní zaměstnanci</small>
   {% endif %}
-  <button type="button" class="btn btn-link text-muted p-0" style="font-size:.75rem"
+
+  {# Tlačítko pro zobrazení lidí z jiných oddělení #}
+  {% if not show_all and other_count > 0 %}
+  <button type="button" class="btn btn-link p-0 text-muted" style="font-size:.72rem"
+      hx-get="{{ url_for('capacity.board_emp_panel', week_start=week_start, date_str=date_str, task_id=task_id) }}?show_all=1"
+      hx-target="#emp-panel-{{ date_str }}-{{ task_id }}"
+      hx-swap="innerHTML">
+    <i class="bi bi-plus-circle"></i> {{ other_count }} dalších z jiných oddělení
+  </button>
+  {% elif show_all and other_count == 0 %}
+  <button type="button" class="btn btn-link text-muted p-0" style="font-size:.72rem"
+      hx-get="{{ url_for('capacity.board_emp_panel', week_start=week_start, date_str=date_str, task_id=task_id) }}"
+      hx-target="#emp-panel-{{ date_str }}-{{ task_id }}"
+      hx-swap="innerHTML">
+    skrýt ostatní
+  </button>
+  {% endif %}
+
+  <button type="button" class="btn btn-link text-muted p-0 ms-2" style="font-size:.75rem"
     onclick="document.getElementById('emp-panel-{{ date_str }}-{{ task_id }}').innerHTML=''">zavřít</button>
 </div>

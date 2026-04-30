@@ -216,10 +216,13 @@ def board_emp_panel(week_start, date_str, task_id):
     plan_id = get_or_find_plan(week_start)
     if plan_id is None:
         plan_id = create_plan_for_week(week_start)
-    employees = get_unassigned_for_task(plan_id, date_str, task_id)
+    show_all = request.args.get('show_all') == '1'
+    employees, other_count = get_unassigned_for_task(plan_id, date_str, task_id, show_all=show_all)
     return render_template(
         'capacity/_board_add_panel.html',
         employees=employees,
+        other_count=other_count,
+        show_all=show_all,
         week_start=week_start,
         plan_id=plan_id,
         date_str=date_str,

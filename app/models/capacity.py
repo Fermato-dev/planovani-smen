@@ -479,10 +479,25 @@ def get_tasks_not_on_day(plan_id, date_str, dept_id):
     return [t for t in all_tasks if t['id'] not in already]
 
 
-def get_unassigned_for_task(plan_id, date_str, task_id):
-    """Vrátí aktivní zaměstnance, kteří nejsou přiřazeni k žádné práci na tento den
-    a nejsou celodenně absenti."""
+def get_unassigned_for_task(plan_id, date_str, task_id, show_all=False):
+    """Vrátí (primary, other_count) pro panel přiřazení zaměstnance.
+
+    primary = zaměstnanci bez práce, jejichž plánované oddělení odpovídá
+              kategorii (work_plan) dané práce, nebo nemají oddělení v plánu.
+    other   = ostatní (jiná kategorie), zobrazí se jen při show_all=True.
+    Filtruje: na nástěnce přiřazeni, celodenně absenti, nemají ten den práci.
+    """
     db = get_db()
+
+    # Kategorie (work_plan) oddělení, ke které práce patří
+    task_info = db.execute(
+        """SELECT COALESCE(d.work_plan, 1) as work_plan
+           FROM tasks t LEFT JOIN departments d ON d.id = t.department_id
+           WHERE t.id = ?""",
+        (task_id,)
+    ).fetchone()
+    task_work_plan = task_info['work_plan'] if task_info else 1
+
     # Zaměstnanci přiřazeni k JAKÉKOLI práci na nástěnce dnes
     on_board = {r[0] for r in db.execute(
         """SELECT DISTINCT a.employee_id FROM board_task_assignments bta
@@ -490,24 +505,53 @@ def get_unassigned_for_task(plan_id, date_str, task_id):
            WHERE a.plan_id=? AND a.date=?""",
         (plan_id, date_str)
     ).fetchall()}
-    # Celodenní absence (půldenní se nevylučují — přijdou na odpoledne)
+
+    # Celodenní absence
     absent = {r[0] for r in db.execute(
         """SELECT DISTINCT employee_id FROM constraints
            WHERE date_from <= ? AND date_to >= ?
              AND (half_day IS NULL OR half_day = 0)""",
         (date_str, date_str)
     ).fetchall()}
+
+    # Plánované oddělení zaměstnance pro tento den (z assignments)
+    dept_rows = db.execute(
+        """SELECT a.employee_id, a.department_id,
+                  COALESCE(d.work_plan, 1) as work_plan
+           FROM assignments a
+           LEFT JOIN departments d ON d.id = a.department_id
+           WHERE a.plan_id=? AND a.date=? AND a.is_absence=0""",
+        (plan_id, date_str)
+    ).fetchall()
+    emp_plan_dept = {
+        r['employee_id']: {'dept_id': r['department_id'], 'work_plan': r['work_plan']}
+        for r in dept_rows
+    }
+
     from app.models.employee import get_all_employees, employee_works_on_day
     from datetime import date as _date
     parts = date_str.split('-')
     weekday = _date(int(parts[0]), int(parts[1]), int(parts[2])).weekday()
-    return [
-        {'id': e['id'], 'name': e['name'], 'color': _emp_color(e['id'])}
-        for e in get_all_employees(active_only=True)
-        if e['id'] not in on_board
-        and e['id'] not in absent
-        and employee_works_on_day(e, weekday)
-    ]
+
+    primary, other = [], []
+    for e in get_all_employees(active_only=True):
+        if e['id'] in on_board or e['id'] in absent or not employee_works_on_day(e, weekday):
+            continue
+        emp_data = {'id': e['id'], 'name': e['name'], 'color': _emp_color(e['id'])}
+        info = emp_plan_dept.get(e['id'])
+        if info and info['dept_id']:
+            # Má předvyplněné oddělení — zařaď podle shody work_plan
+            if info['work_plan'] == task_work_plan:
+                primary.append(emp_data)
+            else:
+                other.append(emp_data)
+        else:
+            # Bez přiřazeného oddělení → nabídnout vždy primárně
+            primary.append(emp_data)
+
+    if show_all:
+        return primary + other, 0
+    return primary, len(other)
 
 
 def board_set_note(assignment_id, note):
