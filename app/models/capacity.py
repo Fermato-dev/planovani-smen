@@ -328,7 +328,7 @@ def get_absent_employees_for_dates(dates):
 
 def board_assign_to_task(plan_id, employee_id, date_str, task_id):
     """Přiřadí zaměstnance ke konkrétní práci na den.
-    1. Najde/vytvoří assignment (dept se bere z task.department_id)
+    1. Najde/vytvoří assignment; nastaví department_id + task_id → propisuje se do plánu směn
     2. Přidá task do board_day_tasks (zajistí viditelný řádek)
     3. Přidá board_task_assignments záznam
     Vrátí assignment_id.
@@ -345,11 +345,17 @@ def board_assign_to_task(plan_id, employee_id, date_str, task_id):
     ).fetchone()
     if existing:
         assignment_id = existing['id']
-        db.execute("UPDATE assignments SET department_id=? WHERE id=?", (dept_id, assignment_id))
+        # Aktualizuj department i task_id → propisuje se do plánu směn
+        db.execute(
+            "UPDATE assignments SET department_id=?, task_id=? WHERE id=?",
+            (dept_id, task_id, assignment_id)
+        )
     else:
         cur = db.execute(
-            "INSERT INTO assignments (plan_id, employee_id, date, department_id, is_absence) VALUES (?,?,?,?,0)",
-            (plan_id, employee_id, date_str, dept_id)
+            """INSERT INTO assignments
+               (plan_id, employee_id, date, department_id, task_id, is_absence)
+               VALUES (?,?,?,?,?,0)""",
+            (plan_id, employee_id, date_str, dept_id, task_id)
         )
         assignment_id = cur.lastrowid
 
@@ -366,20 +372,49 @@ def board_assign_to_task(plan_id, employee_id, date_str, task_id):
 
 
 def board_remove_task(bta_id):
-    """Odebere zaměstnance z práce.
-    Pokud mu nezbyde žádná práce, smaže i celý assignment → vrátí se do nepřiřazených.
+    """Odebere zaměstnance z konkrétní práce.
+    - Pokud zbývají jiné board-práce, aktualizuje assignments.task_id na první zbývající.
+    - Pokud žádná board-práce nezbývá:
+        * má-li zaměstnanec nastavenou směnu → zachová assignment, jen vymaže task_id
+        * nemá-li směnu → smaže celý assignment (vrátí se do nepřiřazených)
     """
     db = get_db()
-    bta = db.execute("SELECT assignment_id FROM board_task_assignments WHERE id=?", (bta_id,)).fetchone()
+    bta = db.execute(
+        "SELECT bta.assignment_id, bta.task_id FROM board_task_assignments bta WHERE bta.id=?",
+        (bta_id,)
+    ).fetchone()
     if not bta:
         return
     assignment_id = bta['assignment_id']
+
     db.execute("DELETE FROM board_task_assignments WHERE id=?", (bta_id,))
+
     remaining = db.execute(
-        "SELECT COUNT(*) FROM board_task_assignments WHERE assignment_id=?", (assignment_id,)
-    ).fetchone()[0]
-    if remaining == 0:
-        db.execute("DELETE FROM assignments WHERE id=?", (assignment_id,))
+        "SELECT task_id FROM board_task_assignments WHERE assignment_id=? LIMIT 1",
+        (assignment_id,)
+    ).fetchone()
+
+    if remaining:
+        # Ještě má jiné board-práce → propíše první zbývající do plánu směn
+        db.execute(
+            "UPDATE assignments SET task_id=? WHERE id=?",
+            (remaining['task_id'], assignment_id)
+        )
+    else:
+        # Žádná board-práce nezbývá
+        row = db.execute(
+            "SELECT shift_template_id FROM assignments WHERE id=?", (assignment_id,)
+        ).fetchone()
+        if row and row['shift_template_id']:
+            # Má směnu → zachovej assignment, jen vymaž task
+            db.execute(
+                "UPDATE assignments SET task_id=NULL, department_id=NULL WHERE id=?",
+                (assignment_id,)
+            )
+        else:
+            # Bez směny → celý assignment pryč (vrátí se do nepřiřazených)
+            db.execute("DELETE FROM assignments WHERE id=?", (assignment_id,))
+
     db.commit()
 
 
