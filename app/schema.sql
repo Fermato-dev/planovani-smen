@@ -131,35 +131,5 @@ CREATE TABLE IF NOT EXISTS users (
     last_login TIMESTAMP
 );
 
--- =============================================
--- Výchozí data (seed)
--- =============================================
-
--- Úseky
-INSERT OR IGNORE INTO departments (name, full_name, color, min_staff, sort_order) VALUES
-    ('VÝR', 'Výroba', 'FFF2CC', 5, 1),
-    ('EXP', 'Expedice', 'CFE2F3', 3, 2);
-
--- Práce - Výroba
-INSERT OR IGNORE INTO tasks (department_id, name) VALUES
-    (1, 'lahvování1'),
-    (1, 'lahvování2'),
-    (1, 'příchutě'),
-    (1, 'koření'),
-    (1, 'sušičky'),
-    (1, 'rajčata'),
-    (1, 'VINACZ'),
-    (1, 'VEDS');
-
--- Práce - Expedice
-INSERT OR IGNORE INTO tasks (department_id, name) VALUES
-    (2, 'balení'),
-    (2, 'expedice'),
-    (2, 'sklad závoz'),
-    (2, 'úklid');
-
--- Šablony směn
-INSERT OR IGNORE INTO shift_templates (name, start_time, end_time, is_default) VALUES
-    ('Ranní', '06:00', '14:30', 1),
-    ('Odpolední', '14:00', '22:00', 0),
-    ('Noční', '22:00', '06:00', 0);
+-- Výchozí seed data jsou spravována přes _migrate_db v db.py (jednorázový INSERT)
+-- aby nedocházelo k obnovení smazaných záznamů při každém requestu.

@@ -227,6 +227,33 @@ def _migrate_db(db):
             db.execute("ALTER TABLE capacity_block_types ADD COLUMN department_id INTEGER DEFAULT NULL")
             db.commit()
 
+    # Jednorázový seed: výchozí data pouze pokud ještě nebyla aplikována
+    # (seed_applied flag zabrání opakovanému vložení při každém requestu)
+    seed_done = db.execute("SELECT value FROM app_settings WHERE key = 'seed_applied'").fetchone()
+    if not seed_done:
+        # Oddělení
+        db.execute("INSERT OR IGNORE INTO departments (name, full_name, color, min_staff, sort_order) VALUES (?, ?, ?, ?, ?)",
+                   ('VÝR', 'Výroba', 'FFF2CC', 5, 1))
+        db.execute("INSERT OR IGNORE INTO departments (name, full_name, color, min_staff, sort_order) VALUES (?, ?, ?, ?, ?)",
+                   ('EXP', 'Expedice', 'CFE2F3', 3, 2))
+        # Práce – Výroba (department_id=1)
+        for task_name in ('lahvování1', 'lahvování2', 'příchutě', 'koření', 'sušičky', 'rajčata', 'VINACZ', 'VEDS'):
+            db.execute("INSERT OR IGNORE INTO tasks (department_id, name) VALUES (1, ?)", (task_name,))
+        # Práce – Expedice (department_id=2)
+        for task_name in ('balení', 'expedice', 'sklad závoz', 'úklid'):
+            db.execute("INSERT OR IGNORE INTO tasks (department_id, name) VALUES (2, ?)", (task_name,))
+        # Šablony směn – pouze pokud jsou tabulky prázdné
+        shift_count = db.execute("SELECT COUNT(*) FROM shift_templates").fetchone()[0]
+        if shift_count == 0:
+            db.execute("INSERT OR IGNORE INTO shift_templates (name, start_time, end_time, is_default) VALUES (?, ?, ?, ?)",
+                       ('Ranní', '06:00', '14:30', 1))
+            db.execute("INSERT OR IGNORE INTO shift_templates (name, start_time, end_time, is_default) VALUES (?, ?, ?, ?)",
+                       ('Odpolední', '14:00', '22:00', 0))
+            db.execute("INSERT OR IGNORE INTO shift_templates (name, start_time, end_time, is_default) VALUES (?, ?, ?, ?)",
+                       ('Noční', '22:00', '06:00', 0))
+        db.execute("INSERT OR REPLACE INTO app_settings (key, value) VALUES ('seed_applied', '1')")
+        db.commit()
+
     # Auto-create default admin if no users exist
     user_count = db.execute("SELECT COUNT(*) FROM users").fetchone()[0]
     if user_count == 0:
