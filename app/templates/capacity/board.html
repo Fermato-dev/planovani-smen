@@ -224,7 +224,10 @@
     <div class="board-section-title">Absence</div>
     <div class="d-flex flex-wrap gap-1 mb-2">
         {% for e in day_absent %}
-        <span class="board-absent-card">{{ e.name }}</span>
+        <span class="board-absent-card">
+            {{ e.name }}
+            {% if e.note %}<span class="absent-note">{{ e.note }}</span>{% endif %}
+        </span>
         {% endfor %}
     </div>
     {% endif %}

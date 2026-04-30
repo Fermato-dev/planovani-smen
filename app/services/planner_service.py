@@ -194,24 +194,54 @@ def _fill_patterns_and_constraints(plan_id, ws, dates):
                 )
 
     # Pass 3: auto-fill absences from constraints (override svátek if needed)
+    # Půldenní absence (half_day=1): zachovej předplněnou práci, jen přidej poznámku.
+    # Celodenní absence (half_day=0): přepiš celý assignment.
+    from app.db import get_db
+    db = get_db()
     week_end = dates[6].isoformat()
     constraints = get_constraints_for_week(ws.isoformat(), week_end)
     for c in constraints:
         c_from = _parse_date(c['date_from'])
         c_to = _parse_date(c['date_to'])
+        half_day = c['half_day'] if 'half_day' in c.keys() else 0
         for d in dates:
             if c_from <= d <= c_to:
-                upsert_assignment(
-                    plan_id=plan_id,
-                    employee_id=c['employee_id'],
-                    date=d.isoformat(),
-                    shift_template_id=None,
-                    department_id=None,
-                    task_id=None,
-                    is_absence=1,
-                    absence_type=c['type'],
-                    note=c['note'] or ''
-                )
+                if half_day:
+                    # Půldenní: přidej jen poznámku k existujícímu přiřazení
+                    note_text = c['note'] or ''
+                    existing = db.execute(
+                        "SELECT id FROM assignments WHERE plan_id=? AND employee_id=? AND date=?",
+                        (plan_id, c['employee_id'], d.isoformat())
+                    ).fetchone()
+                    if existing:
+                        db.execute(
+                            "UPDATE assignments SET note=? WHERE id=?",
+                            (note_text, existing['id'])
+                        )
+                    else:
+                        # Žádné předplněné přiřazení → zapíš jako celodenní absenci
+                        upsert_assignment(
+                            plan_id=plan_id,
+                            employee_id=c['employee_id'],
+                            date=d.isoformat(),
+                            is_absence=1,
+                            absence_type=c['type'],
+                            note=note_text
+                        )
+                else:
+                    # Celodenní absence: přepiš vše
+                    upsert_assignment(
+                        plan_id=plan_id,
+                        employee_id=c['employee_id'],
+                        date=d.isoformat(),
+                        shift_template_id=None,
+                        department_id=None,
+                        task_id=None,
+                        is_absence=1,
+                        absence_type=c['type'],
+                        note=c['note'] or ''
+                    )
+    db.commit()
 
 
 def copy_from_previous_week(target_plan_id, target_week_start):

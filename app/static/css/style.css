@@ -516,7 +516,11 @@ dd { color: var(--fm-text); margin-bottom: 0.75rem; }
   color: #495057; font-weight: 500; white-space: nowrap;
 }
 .board-absent-card {
-  display: inline-flex; padding: 0.1rem 0.35rem; border-radius: 3px;
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  padding: 0.1rem 0.35rem; border-radius: 3px;
   font-size: 0.78rem; background: #fee; color: #999;
   margin: 0.1rem; text-decoration: line-through;
+}
+.board-absent-card .absent-note {
+  text-decoration: none; font-style: italic; color: #c0392b; font-size: 0.72rem; font-weight: 500;
 }

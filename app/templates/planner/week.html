@@ -108,6 +108,10 @@
                 </li>
             </ul>
         </div>
+        <a href="{{ url_for('capacity.board_view', week_start=week_start) }}"
+           class="btn btn-outline-primary btn-sm" title="Přejít do Plánovače pro tento týden">
+            <i class="bi bi-kanban"></i> Plánovač
+        </a>
         <a href="{{ url_for('export.export_week', week_start=week_start) }}"
            class="btn btn-outline-secondary btn-sm" title="Stáhnout Excel">
             <i class="bi bi-file-earmark-spreadsheet"></i> Excel

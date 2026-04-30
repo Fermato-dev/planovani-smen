@@ -313,7 +313,7 @@ def get_absent_employees_for_dates(dates):
     for d in dates:
         ds = d.isoformat()
         rows = db.execute(
-            f"""SELECT e.id as employee_id, e.name
+            f"""SELECT e.id as employee_id, e.name, c.note, c.type as absence_type
                FROM constraints c
                JOIN employees e ON e.id = c.employee_id
                WHERE c.date_from <= ? AND c.date_to >= ?
@@ -322,7 +322,16 @@ def get_absent_employees_for_dates(dates):
                ORDER BY e.name""",
             (ds, ds)
         ).fetchall()
-        result[ds] = [{'employee_id': r['employee_id'], 'name': r['name'], 'color': _emp_color(r['employee_id'])} for r in rows]
+        result[ds] = [
+            {
+                'employee_id': r['employee_id'],
+                'name': r['name'],
+                'color': _emp_color(r['employee_id']),
+                'note': r['note'] or '',
+                'absence_type': r['absence_type'] or '',
+            }
+            for r in rows
+        ]
     return result
 
 
@@ -406,9 +415,9 @@ def board_remove_task(bta_id):
             "SELECT shift_template_id FROM assignments WHERE id=?", (assignment_id,)
         ).fetchone()
         if row and row['shift_template_id']:
-            # Má směnu → zachovej assignment, jen vymaž task
+            # Má směnu → zachovej assignment, vymaž task a poznámku z nástěnky
             db.execute(
-                "UPDATE assignments SET task_id=NULL, department_id=NULL WHERE id=?",
+                "UPDATE assignments SET task_id=NULL, department_id=NULL, note='' WHERE id=?",
                 (assignment_id,)
             )
         else:
