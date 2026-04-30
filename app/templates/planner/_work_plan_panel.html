@@ -33,7 +33,7 @@
 
 <form id="workPlanForm"
       hx-post="{{ url_for('work_plan.save', plan_id=plan_id, day_date=day_date) }}"
-      hx-on::after-request="bootstrap.Modal.getInstance(document.getElementById('workPlanModal')).hide()">
+      hx-on::after-request="var m=document.getElementById('workPlanModal')||document.getElementById('boardWorkPlanModal'); if(m) bootstrap.Modal.getInstance(m).hide()">
 
 {# Záložky #}
 <ul class="nav nav-tabs px-3 pt-2" id="wpTabs">
@@ -230,49 +230,71 @@
 
 <script>
 (function() {
-    // Mazání řádků (delegace na dokument)
-    document.getElementById('workPlanModal').addEventListener('click', function(e) {
-        if (e.target.classList.contains('wp-del')) {
-            e.target.closest('tr').remove();
+    // Mazání řádků – delegace na oba možné modaly (plán směn i plánovač)
+    ['workPlanModal', 'boardWorkPlanModal'].forEach(function(modalId) {
+        var modal = document.getElementById(modalId);
+        if (modal && !modal._wpDelListening) {
+            modal._wpDelListening = true;
+            modal.addEventListener('click', function(e) {
+                if (e.target.classList.contains('wp-del')) {
+                    e.target.closest('tr').remove();
+                }
+            });
         }
     });
 
-    // Přidávání řádků – nový řádek navazuje časem na předchozí
-    document.querySelectorAll('.wp-add-row').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            const prefix = btn.dataset.prefix;
-            const tbody = document.getElementById(btn.dataset.target);
-            const tmpl = document.getElementById(prefix + 'RowTmpl');
+    // Přidávání řádků s navazujícím časem
+    // setTimeout zajistí, že DOM je plně vložen před připnutím listenerů
+    setTimeout(function() {
+        document.querySelectorAll('.wp-add-row').forEach(function(btn) {
+            if (btn._wpListening) return;  // zabrání duplikátním listenerům
+            btn._wpListening = true;
+            btn.addEventListener('click', function() {
+                const prefix = this.dataset.prefix;
+                const tbody = document.getElementById(this.dataset.target);
+                const tmpl = document.getElementById(prefix + 'RowTmpl');
+                if (!tbody || !tmpl) return;
 
-            // Zjisti čas konce posledního řádku
-            const rows = tbody.querySelectorAll('tr.wp-row');
-            let nextFrom = '';
-            if (rows.length > 0) {
-                const lastRow = rows[rows.length - 1];
-                const toInput = lastRow.querySelector('input[name="' + prefix + '_time_to[]"]');
-                if (toInput && toInput.value.trim()) {
-                    nextFrom = toInput.value.trim();
+                // Najdi čas konce posledního řádku (robustní: hledáme přes name.includes)
+                const rows = tbody.querySelectorAll('tr.wp-row');
+                let nextFrom = '';
+                if (rows.length > 0) {
+                    const lastRow = rows[rows.length - 1];
+                    for (const inp of lastRow.querySelectorAll('input')) {
+                        if (inp.name && inp.name.indexOf('time_to') !== -1 && inp.value.trim()) {
+                            nextFrom = inp.value.trim();
+                            break;
+                        }
+                    }
                 }
-            }
 
-            const clone = tmpl.content.cloneNode(true);
+                const clone = tmpl.content.cloneNode(true);
 
-            // Předvyplni čas od = čas do předchozího řádku
-            if (nextFrom) {
-                const fromInput = clone.querySelector('input[name="' + prefix + '_time_from[]"]');
-                if (fromInput) fromInput.value = nextFrom;
-            }
+                // Předvyplni "Od" = "Do" předchozího řádku
+                if (nextFrom) {
+                    for (const inp of clone.querySelectorAll('input')) {
+                        if (inp.name && inp.name.indexOf('time_from') !== -1) {
+                            inp.value = nextFrom;
+                            break;
+                        }
+                    }
+                }
 
-            tbody.appendChild(clone);
+                tbody.appendChild(clone);
 
-            // Zaměř kurzor na pole "do" nového řádku
-            const newRows = tbody.querySelectorAll('tr.wp-row');
-            if (newRows.length > 0) {
-                const newRow = newRows[newRows.length - 1];
-                const toFocus = newRow.querySelector('input[name="' + prefix + '_time_to[]"]');
-                if (toFocus) toFocus.focus();
-            }
+                // Zaměř kurzor na pole "Do" nového řádku
+                const newRows = tbody.querySelectorAll('tr.wp-row');
+                if (newRows.length > 0) {
+                    const newRow = newRows[newRows.length - 1];
+                    for (const inp of newRow.querySelectorAll('input')) {
+                        if (inp.name && inp.name.indexOf('time_to') !== -1) {
+                            inp.focus();
+                            break;
+                        }
+                    }
+                }
+            });
         });
-    });
+    }, 0);
 })();
 </script>

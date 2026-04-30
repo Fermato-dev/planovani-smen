@@ -3,7 +3,6 @@
     <td class="emp-name fw-bold">Obsazení</td>
     {% for d in dates %}
     {% set ds = d.isoformat() %}
-    {% set day_reqs = req_map.get(ds, {}) %}
     <td class="summary-cell {{ 'col-weekend' if d.weekday() >= 5 }}">
         {% for s in summary.get(ds, []) %}
         {# Spočítám kolik lidí má přiřazenou práci v tomto oddělení #}
@@ -21,32 +20,14 @@
         </div>
         {# Práce patřící tomuto oddělení #}
         {% for t in task_summary.get(ds, []) if t.department_id == s.id %}
-        {% set req = day_reqs.get(t.id) %}
         <div class="task-summary-line">
             <small class="text-muted">↳ {{ t.name }}</small>
-            {% if req %}
-                {% set mn = req.min_count %}
-                {% set mx = req.max_count %}
-                {% if mx and mx > 0 %}
-                    {# Rozsah min–max #}
-                    <span class="{% if t.staff_count < mn %}staff-danger{% elif t.staff_count >= mn %}staff-ok{% endif %}">
-                        {{ t.staff_count }}/{{ mn }}–{{ mx }}
-                    </span>
-                {% else %}
-                    {# Jen minimum #}
-                    <span class="{% if t.staff_count < mn %}staff-danger{% elif t.staff_count >= mn %}staff-ok{% endif %}">
-                        {{ t.staff_count }}/{{ mn }}
-                    </span>
-                {% endif %}
-            {% else %}
-                <span class="staff-count">{{ t.staff_count }}</span>
-            {% endif %}
+            <span class="staff-count">{{ t.staff_count }}</span>
         </div>
         {% endfor %}
         {% endfor %}
 
-        {# Přidat tlačítko pro potřeby pokud nejsou žádné naplánované ani požadavky #}
-        {% if not summary.get(ds) and not day_reqs %}
+        {% if not summary.get(ds) %}
         <div class="text-muted" style="font-size:0.7rem">–</div>
         {% endif %}
     </td>

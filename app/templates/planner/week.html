@@ -336,17 +336,6 @@
                             {% elif is_vacation %}
                             <span class="vacation-label">{{ vacation_days_map[day_iso] }}</span>
                             {% endif %}
-                            {# Tlačítko "Potřeby dne" #}
-                            <button type="button"
-                                    class="btn btn-req-day {% if req_map.get(dates[i].isoformat()) %}btn-req-active{% endif %}"
-                                    title="Potřeby dne"
-                                    hx-get="{{ url_for('planner.requirements_panel', plan_id=plan.id, day_date=dates[i].isoformat()) }}"
-                                    hx-target="#reqModal .modal-body-inner"
-                                    hx-swap="innerHTML"
-                                    data-bs-toggle="modal"
-                                    data-bs-target="#reqModal">
-                                <i class="bi bi-clipboard-check"></i>
-                            </button>
                             {# Tlačítko "Plán práce" #}
                             <button type="button"
                                     class="btn btn-req-day {% if work_plan_map.get(dates[i].isoformat(), {}).get('lahvovani') or work_plan_map.get(dates[i].isoformat(), {}).get('priprava') %}btn-req-active{% endif %}"
@@ -441,20 +430,6 @@
     <div class="text-muted" style="font-size:0.7rem;">
         <i class="bi bi-keyboard"></i>
         ↑↓←→ navigace &middot; Enter editace &middot; Esc zrušit &middot; Ctrl+Enter uložit
-    </div>
-</div>
-
-<!-- Potřeby dne Modal -->
-<div class="modal fade" id="reqModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-body-inner">
-                {# Obsah se načítá dynamicky přes HTMX #}
-                <div class="modal-body text-center text-muted py-4">
-                    <i class="bi bi-hourglass-split"></i> Načítám…
-                </div>
-            </div>
-        </div>
     </div>
 </div>
 

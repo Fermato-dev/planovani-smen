@@ -9,6 +9,7 @@ from app.models.day_requirement import (
     get_requirements_for_day, get_requirements_map,
     save_day_requirements, clear_day_requirements
 )
+# Poznámka: requirements jsou zachovány na backendu ale odstraněny z UI Plánu směn
 from app.models.work_plan import has_entries_map
 from app.models.company_vacation import get_company_vacations_for_week, get_vacation_days_map
 from app.utils.holidays import get_holidays_for_dates
@@ -67,7 +68,6 @@ def week_view(week_start):
     plan = get_plan(plan_id)
     grid, dates = build_plan_grid(plan_id, week_start)
     summary, task_summary = get_staffing_summary(plan_id, dates)
-    req_map = get_requirements_map(plan_id, dates)
     work_plan_map = has_entries_map(plan_id, dates)
     departments = get_all_departments()
     shifts = get_all_shifts()
@@ -133,7 +133,6 @@ def week_view(week_start):
     return render_template('planner/week.html',
                            plan=plan, grid=grid, dates=dates,
                            summary=summary, task_summary=task_summary,
-                           req_map=req_map,
                            work_plan_map=work_plan_map,
                            departments=departments,
                            shifts=shifts, day_names=DAY_NAMES,
@@ -243,11 +242,9 @@ def summary_row(plan_id, week_start):
     """HTMX: return updated staffing summary row."""
     dates = get_week_dates(week_start)
     summary, task_summary = get_staffing_summary(plan_id, dates)
-    req_map = get_requirements_map(plan_id, dates)
     return render_template('planner/_summary_row.html',
                            dates=dates, summary=summary,
-                           task_summary=task_summary,
-                           req_map=req_map)
+                           task_summary=task_summary)
 
 
 @bp.route('/requirements/<int:plan_id>/<day_date>', methods=['GET'])
