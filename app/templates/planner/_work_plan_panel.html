@@ -33,6 +33,7 @@
 
 <form id="workPlanForm"
       hx-post="{{ url_for('work_plan.save', plan_id=plan_id, day_date=day_date) }}"
+      hx-swap="none"
       hx-on::after-request="
         var btn=document.getElementById('wpSaveBtn');
         btn.innerHTML='<i class=\'bi bi-check-lg\'></i> Uloženo';
@@ -98,6 +99,9 @@
         <button type="button" class="btn btn-sm btn-outline-secondary wp-add-row" data-target="lahRows" data-prefix="lah">
             <i class="bi bi-plus"></i> Přidat řádek
         </button>
+        <button type="button" class="btn btn-sm btn-outline-secondary wp-sort-btn ms-1" data-target="lahRows" title="Seřadit řádky podle času">
+            <i class="bi bi-sort-numeric-down"></i> Seřadit
+        </button>
     </div>
 
     {# --- TAB: Příprava --- #}
@@ -131,6 +135,9 @@
         <button type="button" class="btn btn-sm btn-outline-secondary wp-add-row" data-target="prepRows" data-prefix="prep">
             <i class="bi bi-plus"></i> Přidat řádek
         </button>
+        <button type="button" class="btn btn-sm btn-outline-secondary wp-sort-btn ms-1" data-target="prepRows" title="Seřadit řádky podle času">
+            <i class="bi bi-sort-numeric-down"></i> Seřadit
+        </button>
     </div>
 
     {# --- TAB: Koření --- #}
@@ -163,6 +170,9 @@
         </table>
         <button type="button" class="btn btn-sm btn-outline-secondary wp-add-row" data-target="korRows" data-prefix="kor">
             <i class="bi bi-plus"></i> Přidat řádek
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-secondary wp-sort-btn ms-1" data-target="korRows" title="Seřadit řádky podle času">
+            <i class="bi bi-sort-numeric-down"></i> Seřadit
         </button>
     </div>
 
@@ -250,6 +260,33 @@
             });
         }
     });
+
+    // Seřazení řádků podle času (kliknutí na tlačítko Seřadit)
+    setTimeout(function() {
+        document.querySelectorAll('.wp-sort-btn').forEach(function(btn) {
+            if (btn._wpSortListening) return;
+            btn._wpSortListening = true;
+            btn.addEventListener('click', function() {
+                const tbody = document.getElementById(this.dataset.target);
+                if (!tbody) return;
+                const rows = Array.from(tbody.querySelectorAll('tr.wp-row'));
+                rows.sort(function(a, b) {
+                    var aT = '', bT = '';
+                    for (var inp of a.querySelectorAll('input')) {
+                        if (inp.name && inp.name.indexOf('time_from') !== -1) { aT = inp.value || ''; break; }
+                    }
+                    for (var inp of b.querySelectorAll('input')) {
+                        if (inp.name && inp.name.indexOf('time_from') !== -1) { bT = inp.value || ''; break; }
+                    }
+                    return aT.localeCompare(bT);
+                });
+                rows.forEach(function(r) { tbody.appendChild(r); });
+                // Krátký vizuální feedback
+                btn.innerHTML = '<i class="bi bi-check-lg"></i> Seřazeno';
+                setTimeout(function() { btn.innerHTML = '<i class="bi bi-sort-numeric-down"></i> Seřadit'; }, 1200);
+            });
+        });
+    }, 0);
 
     // Přidávání řádků s navazujícím časem
     // setTimeout zajistí, že DOM je plně vložen před připnutím listenerů
