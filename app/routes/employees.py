@@ -2,6 +2,7 @@ import json
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from app.models.employee import (
     get_all_employees, get_employee, create_employee, update_employee, delete_employee,
+    hard_delete_employee,
     get_qualifications, set_qualifications, get_default_pattern, set_default_pattern
 )
 from app.models.department import get_all_departments, get_all_tasks, get_tasks_for_department
@@ -107,6 +108,22 @@ def toggle(emp_id):
         update_employee(emp_id, active=new_active)
         status = 'deaktivován' if employee['active'] else 'aktivován'
         flash(f'{employee["name"]} {status}.', 'success')
+    return redirect(url_for('employees.index'))
+
+
+@bp.route('/<int:emp_id>/hard-delete', methods=['POST'])
+def hard_delete(emp_id):
+    employee = get_employee(emp_id)
+    if not employee:
+        flash('Zaměstnanec nenalezen.', 'error')
+        return redirect(url_for('employees.index'))
+    name = employee['name']
+    try:
+        hard_delete_employee(emp_id)
+        flash(f'Zaměstnanec {name} byl natvrdo smazán včetně všech dat.', 'success')
+    except Exception as e:
+        flash(f'Chyba při mazání: {e}', 'error')
+        return redirect(url_for('employees.detail', emp_id=emp_id))
     return redirect(url_for('employees.index'))
 
 

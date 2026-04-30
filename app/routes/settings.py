@@ -164,12 +164,16 @@ def shift_edit(shift_id):
 def shift_delete(shift_id):
     try:
         s = get_shift(shift_id)
-        delete_shift(shift_id)
-        flash(f'Směna "{s["name"]}" smazána.', 'success') if s else None
+        result = delete_shift(shift_id)
+        name = s['name'] if s else f'#{shift_id}'
+        msg = f'Směna "{name}" smazána.'
+        if result and result.get('cleared_assignments'):
+            msg += f' (Vyčištěno {result["cleared_assignments"]} přiřazení.)'
+        flash(msg, 'success')
     except Exception as e:
         logger.error(f"Shift delete error: {e}", exc_info=True)
         flash(f'Chyba při mazání směny: {e}', 'error')
-    return redirect(url_for('settings.index'))
+    return redirect(url_for('settings.index', tab='shifts'))
 
 
 # --- Task Date Requirements ---

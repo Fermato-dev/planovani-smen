@@ -13,6 +13,18 @@
         <a href="{{ url_for('employees.edit', emp_id=employee.id) }}" class="btn btn-primary">
             <i class="bi bi-pencil"></i> Upravit
         </a>
+        <form method="POST" action="{{ url_for('employees.toggle', emp_id=employee.id) }}" class="d-inline">
+            <button type="submit" class="btn btn-outline-secondary">
+                {% if employee.active %}<i class="bi bi-person-x"></i> Deaktivovat
+                {% else %}<i class="bi bi-person-check"></i> Aktivovat{% endif %}
+            </button>
+        </form>
+        <form method="POST" action="{{ url_for('employees.hard_delete', emp_id=employee.id) }}" class="d-inline"
+              onsubmit="return confirm('POZOR: Toto natvrdo smaže zaměstnance {{ employee.name }} a všechna jeho data (směny, přiřazení, omezení). Tato akce je nevratná!\n\nOpravdu smazat?')">
+            <button type="submit" class="btn btn-outline-danger">
+                <i class="bi bi-trash3"></i> Smazat natvrdo
+            </button>
+        </form>
         <a href="{{ url_for('employees.index') }}" class="btn btn-outline-secondary">
             <i class="bi bi-arrow-left"></i> Zpět
         </a>

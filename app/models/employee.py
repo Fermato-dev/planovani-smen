@@ -57,6 +57,23 @@ def delete_employee(emp_id):
     db.commit()
 
 
+def hard_delete_employee(emp_id):
+    """Natvrdo smaže zaměstnance i všechna jeho data (assignments, constraints, vzory, kvalifikace)."""
+    db = get_db()
+    # Nejprve smaž board_task_assignments navázané přes assignments
+    db.execute(
+        """DELETE FROM board_task_assignments
+           WHERE assignment_id IN (SELECT id FROM assignments WHERE employee_id = ?)""",
+        (emp_id,)
+    )
+    db.execute("DELETE FROM assignments WHERE employee_id = ?", (emp_id,))
+    db.execute("DELETE FROM constraints WHERE employee_id = ?", (emp_id,))
+    db.execute("DELETE FROM employee_qualifications WHERE employee_id = ?", (emp_id,))
+    db.execute("DELETE FROM employee_default_pattern WHERE employee_id = ?", (emp_id,))
+    db.execute("DELETE FROM employees WHERE id = ?", (emp_id,))
+    db.commit()
+
+
 def parse_work_days(work_days_str):
     """Vrátí set čísel dnů (0=Po … 6=Ne) ze stringu 'work_days'. None → všechny dny."""
     if not work_days_str:

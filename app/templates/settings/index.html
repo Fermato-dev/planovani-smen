@@ -8,7 +8,7 @@
 
 <ul class="nav nav-tabs mb-3" role="tablist">
     <li class="nav-item">
-        <button class="nav-link {{ 'active' if active_tab not in ('email', 'requirements', 'capacity') }}" data-bs-toggle="tab" data-bs-target="#tab-departments">
+        <button class="nav-link {{ 'active' if active_tab not in ('email', 'requirements', 'capacity', 'shifts') }}" data-bs-toggle="tab" data-bs-target="#tab-departments">
             <i class="bi bi-building"></i> Oddělení
         </button>
     </li>
@@ -18,7 +18,7 @@
         </button>
     </li>
     <li class="nav-item">
-        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-shifts">
+        <button class="nav-link {{ 'active' if active_tab == 'shifts' }}" data-bs-toggle="tab" data-bs-target="#tab-shifts">
             <i class="bi bi-clock"></i> Směny
         </button>
     </li>
@@ -47,7 +47,7 @@
 
 <div class="tab-content">
     <!-- DEPARTMENTS TAB -->
-    <div class="tab-pane fade {{ 'show active' if active_tab not in ('email', 'requirements', 'capacity') }}" id="tab-departments">
+    <div class="tab-pane fade {{ 'show active' if active_tab not in ('email', 'requirements', 'capacity', 'shifts') }}" id="tab-departments">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span>Oddělení (úseky)</span>
@@ -278,7 +278,7 @@
     </div>
 
     <!-- SHIFTS TAB -->
-    <div class="tab-pane fade" id="tab-shifts">
+    <div class="tab-pane fade {{ 'show active' if active_tab == 'shifts' }}" id="tab-shifts">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span>Šablony směn</span>
