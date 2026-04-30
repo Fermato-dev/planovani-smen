@@ -16,6 +16,17 @@
 
 {% set date_strings = dates | map('string') | list %}
 
+<script>
+// Po načtení stránky aktivuj tab dle URL hash (#tab-YYYY-MM-DD)
+document.addEventListener('DOMContentLoaded', function () {
+    const hash = window.location.hash;
+    if (hash && hash.startsWith('#tab-')) {
+        const trigger = document.querySelector('[data-bs-target="' + hash + '"]');
+        if (trigger) bootstrap.Tab.getOrCreateInstance(trigger).show();
+    }
+});
+</script>
+
 <ul class="nav nav-tabs mb-3" id="boardDayTabs" role="tablist">
     {% for d in dates %}
     {% set ds = d.isoformat() %}
@@ -74,9 +85,13 @@
     {% endif %}
 
     {# ── Shrnutí ── #}
+    {% set full_absent_cnt = day_absent | selectattr('half_day', 'false') | list | length %}
+    {% set half_absent_cnt = day_absent | selectattr('half_day') | list | length %}
     <div class="board-day-summary mb-3">
         <div class="board-summary-badge">👥 <span class="num">{{ day_avail.total or 0 }}</span> celkem</div>
-        <div class="board-summary-badge">🏥 <span class="num">{{ day_absent | length }}</span> absence</div>
+        <div class="board-summary-badge">🏥 <span class="num">{{ full_absent_cnt }}</span> absence
+            {% if half_absent_cnt > 0 %}<span class="badge-detail">+ {{ half_absent_cnt }} půl dne</span>{% endif %}
+        </div>
         <div class="board-summary-badge">✅ <span class="num">{{ day_avail.available | int if day_avail.available is defined else 0 }}</span> dostupných</div>
         {% for dept in vyroba_depts + expedice_depts %}
         {% set placed = dept_placed.get(dept.id, 0) %}
@@ -113,6 +128,7 @@
             {% if editable and task_data.bdt_id %}
             <form method="POST" action="{{ url_for('capacity.board_remove_day_task_view', bdt_id=task_data.bdt_id) }}" class="d-inline m-0">
                 <input type="hidden" name="week_start" value="{{ week_start }}">
+                <input type="hidden" name="date_str" value="{{ ds }}">
                 <button type="submit" class="board-task-del-btn" title="Odebrat práci z tohoto dne">🗑</button>
             </form>
             {% endif %}
@@ -129,6 +145,7 @@
                     {% if editable %}
                     <form method="POST" action="{{ url_for('capacity.board_remove_from_task', bta_id=emp.bta_id) }}" class="d-inline m-0">
                         <input type="hidden" name="week_start" value="{{ week_start }}">
+                        <input type="hidden" name="date_str" value="{{ ds }}">
                         <button type="submit" class="chip-remove-btn" title="Odebrat z práce">×</button>
                     </form>
                     {% endif %}
@@ -139,6 +156,7 @@
                     <summary title="Upravit poznámku">✎</summary>
                     <form method="POST" action="{{ url_for('capacity.board_set_note_view') }}" class="chip-note-form">
                         <input type="hidden" name="week_start" value="{{ week_start }}">
+                        <input type="hidden" name="date_str" value="{{ ds }}">
                         <input type="hidden" name="assignment_id" value="{{ emp.assignment_id }}">
                         <input type="text" name="note" value="{{ emp.note }}" class="form-control form-control-sm" placeholder="poznámka..." style="min-width:120px">
                         <button type="submit" class="btn btn-outline-secondary btn-sm">OK</button>
@@ -220,16 +238,29 @@
     {% endif %}
 
     {# ── Absence ── #}
-    {% if day_absent %}
+    {% set full_absent = day_absent | selectattr('half_day', 'false') | list %}
+    {% set half_absent = day_absent | selectattr('half_day') | list %}
+    {% if full_absent or half_absent %}
     <div class="board-section-title">Absence</div>
-    <div class="d-flex flex-wrap gap-1 mb-2">
-        {% for e in day_absent %}
+    <div class="d-flex flex-wrap gap-1 mb-1">
+        {% for e in full_absent %}
         <span class="board-absent-card">
             {{ e.name }}
             {% if e.note %}<span class="absent-note">{{ e.note }}</span>{% endif %}
         </span>
         {% endfor %}
     </div>
+    {% if half_absent %}
+    <div style="font-size:.7rem;color:var(--fm-text-muted);margin:.1rem 0 2px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Půl den</div>
+    <div class="d-flex flex-wrap gap-1 mb-2">
+        {% for e in half_absent %}
+        <span class="board-absent-card board-absent-half">
+            {{ e.name }}
+            {% if e.note %}<span class="absent-note">{{ e.note }}</span>{% endif %}
+        </span>
+        {% endfor %}
+    </div>
+    {% endif %}
     {% endif %}
 
     {# ── Odkaz na plán směn ── #}

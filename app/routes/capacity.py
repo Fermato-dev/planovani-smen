@@ -117,7 +117,8 @@ def board_view(week_start):
         unassigned_totals = {}
         for d in dates:
             ds = d.isoformat()
-            absent_ids = {e['employee_id'] for e in absent.get(ds, [])}
+            # Pouze CELODENNÍ absence blokují zobrazení v Nepřiřazených
+            absent_ids = {e['employee_id'] for e in absent.get(ds, []) if not e.get('half_day')}
             assigned_ids = set()
             for dept_tasks in board.get(ds, {}).values():
                 for task_data in dept_tasks.values():
@@ -243,6 +244,14 @@ def board_day_task_panel(week_start, date_str, dept_id):
     )
 
 
+def _board_redirect(week_start, date_str=''):
+    """Redirect back to board, preserving the active day tab."""
+    url = url_for('capacity.board_view', week_start=week_start)
+    if date_str:
+        url += f'#tab-{date_str}'
+    return redirect(url)
+
+
 @bp.route('/board/assign-to-task', methods=['POST'])
 def board_assign_to_task_view():
     week_start = request.form.get('week_start', '')
@@ -252,14 +261,15 @@ def board_assign_to_task_view():
     task_id = request.form.get('task_id', type=int)
     if plan_id and employee_id and date_str and task_id:
         board_assign_to_task(plan_id, employee_id, date_str, task_id)
-    return redirect(url_for('capacity.board_view', week_start=week_start))
+    return _board_redirect(week_start, date_str)
 
 
 @bp.route('/board/remove-from-task/<int:bta_id>', methods=['POST'])
 def board_remove_from_task(bta_id):
     week_start = request.form.get('week_start', '')
+    date_str = request.form.get('date_str', '')
     board_remove_task(bta_id)
-    return redirect(url_for('capacity.board_view', week_start=week_start))
+    return _board_redirect(week_start, date_str)
 
 
 @bp.route('/board/add-day-task', methods=['POST'])
@@ -270,24 +280,26 @@ def board_add_day_task_view():
     task_id = request.form.get('task_id', type=int)
     if plan_id and date_str and task_id:
         board_add_day_task(plan_id, date_str, task_id)
-    return redirect(url_for('capacity.board_view', week_start=week_start))
+    return _board_redirect(week_start, date_str)
 
 
 @bp.route('/board/remove-day-task/<int:bdt_id>', methods=['POST'])
 def board_remove_day_task_view(bdt_id):
     week_start = request.form.get('week_start', '')
+    date_str = request.form.get('date_str', '')
     board_remove_day_task(bdt_id)
-    return redirect(url_for('capacity.board_view', week_start=week_start))
+    return _board_redirect(week_start, date_str)
 
 
 @bp.route('/board/set-note', methods=['POST'])
 def board_set_note_view():
     week_start = request.form.get('week_start', '')
+    date_str = request.form.get('date_str', '')
     assignment_id = request.form.get('assignment_id', type=int)
     note = request.form.get('note', '').strip()
     if assignment_id is not None:
         board_set_note(assignment_id, note)
-    return redirect(url_for('capacity.board_view', week_start=week_start))
+    return _board_redirect(week_start, date_str)
 
 
 @bp.route('/week/<week_start>')

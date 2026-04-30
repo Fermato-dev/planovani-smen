@@ -312,14 +312,15 @@ def get_absent_employees_for_dates(dates):
     result = {}
     for d in dates:
         ds = d.isoformat()
+        # Vrátíme VŠECHNY absence (celodenní i půldenní) s příznakem half_day
         rows = db.execute(
-            f"""SELECT e.id as employee_id, e.name, c.note, c.type as absence_type
+            f"""SELECT e.id as employee_id, e.name, c.note, c.type as absence_type,
+                       COALESCE(c.half_day, 0) as half_day
                FROM constraints c
                JOIN employees e ON e.id = c.employee_id
                WHERE c.date_from <= ? AND c.date_to >= ?
-                 {half_filter}
                  AND e.active = 1
-               ORDER BY e.name""",
+               ORDER BY COALESCE(c.half_day, 0), e.name""",
             (ds, ds)
         ).fetchall()
         result[ds] = [
@@ -329,6 +330,7 @@ def get_absent_employees_for_dates(dates):
                 'color': _emp_color(r['employee_id']),
                 'note': r['note'] or '',
                 'absence_type': r['absence_type'] or '',
+                'half_day': bool(r['half_day']),
             }
             for r in rows
         ]
@@ -478,28 +480,33 @@ def get_tasks_not_on_day(plan_id, date_str, dept_id):
 
 
 def get_unassigned_for_task(plan_id, date_str, task_id):
-    """Vrátí aktivní zaměstnance, kteří nejsou přiřazeni k dané práci na tento den
-    (mohou být přiřazeni k jiné práci — to je v pořádku)."""
+    """Vrátí aktivní zaměstnance, kteří nejsou přiřazeni k žádné práci na tento den
+    a nejsou celodenně absenti."""
     db = get_db()
-    # Zaměstnanci, kteří už mají tuto konkrétní práci
-    already = {r[0] for r in db.execute(
-        """SELECT a.employee_id FROM board_task_assignments bta
+    # Zaměstnanci přiřazeni k JAKÉKOLI práci na nástěnce dnes
+    on_board = {r[0] for r in db.execute(
+        """SELECT DISTINCT a.employee_id FROM board_task_assignments bta
            JOIN assignments a ON a.id = bta.assignment_id
-           WHERE a.plan_id=? AND a.date=? AND bta.task_id=?""",
-        (plan_id, date_str, task_id)
+           WHERE a.plan_id=? AND a.date=?""",
+        (plan_id, date_str)
     ).fetchall()}
-    # Celodenní absence
+    # Celodenní absence (půldenní se nevylučují — přijdou na odpoledne)
     absent = {r[0] for r in db.execute(
         """SELECT DISTINCT employee_id FROM constraints
            WHERE date_from <= ? AND date_to >= ?
              AND (half_day IS NULL OR half_day = 0)""",
         (date_str, date_str)
     ).fetchall()}
-    from app.models.employee import get_all_employees
+    from app.models.employee import get_all_employees, employee_works_on_day
+    from datetime import date as _date
+    parts = date_str.split('-')
+    weekday = _date(int(parts[0]), int(parts[1]), int(parts[2])).weekday()
     return [
         {'id': e['id'], 'name': e['name'], 'color': _emp_color(e['id'])}
         for e in get_all_employees(active_only=True)
-        if e['id'] not in already and e['id'] not in absent
+        if e['id'] not in on_board
+        and e['id'] not in absent
+        and employee_works_on_day(e, weekday)
     ]
 
 
