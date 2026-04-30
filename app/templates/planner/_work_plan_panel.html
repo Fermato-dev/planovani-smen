@@ -33,7 +33,15 @@
 
 <form id="workPlanForm"
       hx-post="{{ url_for('work_plan.save', plan_id=plan_id, day_date=day_date) }}"
-      hx-on::after-request="var m=document.getElementById('workPlanModal')||document.getElementById('boardWorkPlanModal'); if(m) bootstrap.Modal.getInstance(m).hide()">
+      hx-on::after-request="
+        var btn=document.getElementById('wpSaveBtn');
+        btn.innerHTML='<i class=\'bi bi-check-lg\'></i> Uloženo';
+        btn.classList.replace('btn-primary','btn-success');
+        setTimeout(function(){
+          btn.innerHTML='<i class=\'bi bi-floppy\'></i> Uložit';
+          btn.classList.replace('btn-success','btn-primary');
+        },2500);
+      ">
 
 {# Záložky #}
 <ul class="nav nav-tabs px-3 pt-2" id="wpTabs">
@@ -176,7 +184,7 @@
     </div>
     <div>
         <button type="button" class="btn btn-sm btn-secondary me-1" data-bs-dismiss="modal">Zrušit</button>
-        <button type="submit" class="btn btn-sm btn-primary">
+        <button type="submit" id="wpSaveBtn" class="btn btn-sm btn-primary">
             <i class="bi bi-floppy me-1"></i>Uložit
         </button>
     </div>

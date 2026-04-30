@@ -40,7 +40,7 @@ def get_entries(plan_id, date, section):
     rows = db.execute(
         """SELECT * FROM work_plan_entries
            WHERE plan_id = ? AND date = ? AND section = ?
-           ORDER BY sort_order""",
+           ORDER BY time_from, line, sort_order""",
         (plan_id, date, section)
     ).fetchall()
     return [dict(r) for r in rows]
@@ -101,7 +101,7 @@ def copy_from_previous_day(plan_id, date, section):
         rows = db.execute(
             """SELECT * FROM work_plan_entries
                WHERE plan_id = ? AND date = ? AND section = ?
-               ORDER BY sort_order""",
+               ORDER BY time_from, line, sort_order""",
             (plan_id, prev_date, section)
         ).fetchall()
         if rows:
