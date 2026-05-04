@@ -500,10 +500,11 @@ def get_unassigned_for_task(plan_id, date_str, task_id, show_all=False):
     task_work_plan = task_info['work_plan'] if task_info else 1
 
     # Zaměstnanci přiřazeni k JAKÉKOLI práci na nástěnce dnes
+    # Pouze is_absence=0 – aby zaměstnanci s půldenní absencí (stale BTA) nebyli filtrováni ven
     on_board = {r[0] for r in db.execute(
         """SELECT DISTINCT a.employee_id FROM board_task_assignments bta
            JOIN assignments a ON a.id = bta.assignment_id
-           WHERE a.plan_id=? AND a.date=?""",
+           WHERE a.plan_id=? AND a.date=? AND a.is_absence=0""",
         (plan_id, date_str)
     ).fetchall()}
 
