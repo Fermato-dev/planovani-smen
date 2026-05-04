@@ -417,9 +417,10 @@ def board_remove_task(bta_id):
             "SELECT shift_template_id FROM assignments WHERE id=?", (assignment_id,)
         ).fetchone()
         if row and row['shift_template_id']:
-            # Má směnu → zachovej assignment, vymaž task a poznámku z nástěnky
+            # Má směnu → zachovej assignment i department_id (aby zůstal ve správné skupině
+            # v Nepřiřazených), vymaž jen task_id a poznámku
             db.execute(
-                "UPDATE assignments SET task_id=NULL, department_id=NULL, note='' WHERE id=?",
+                "UPDATE assignments SET task_id=NULL, note='' WHERE id=?",
                 (assignment_id,)
             )
         else:
