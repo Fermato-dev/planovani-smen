@@ -529,10 +529,26 @@ def get_unassigned_for_task(plan_id, date_str, task_id, show_all=False):
         for r in dept_rows
     }
 
-    from app.models.employee import get_all_employees, employee_works_on_day
+    # Fallback: zaměstnanci s půldenní absencí nemají is_absence=0 assignment.
+    # Použijeme výchozí vzor pro daný den v týdnu.
     from datetime import date as _date
     parts = date_str.split('-')
     weekday = _date(int(parts[0]), int(parts[1]), int(parts[2])).weekday()
+
+    pattern_rows = db.execute(
+        """SELECT edp.employee_id, edp.department_id,
+                  COALESCE(dep.work_plan, 1) as work_plan
+           FROM employee_default_pattern edp
+           LEFT JOIN departments dep ON dep.id = edp.department_id
+           WHERE edp.day_of_week = ? AND edp.department_id IS NOT NULL""",
+        (weekday,)
+    ).fetchall()
+    for r in pattern_rows:
+        eid = r['employee_id']
+        if eid not in emp_plan_dept or not emp_plan_dept[eid]['dept_id']:
+            emp_plan_dept[eid] = {'dept_id': r['department_id'], 'work_plan': r['work_plan']}
+
+    from app.models.employee import get_all_employees, employee_works_on_day
 
     primary, other = [], []
     for e in get_all_employees(active_only=True):

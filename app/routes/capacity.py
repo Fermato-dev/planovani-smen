@@ -143,6 +143,25 @@ def board_view(week_start):
                 for r in dept_rows
             }
 
+            # Fallback: zaměstnanci s půldenní absencí (is_absence=1) nejsou v dept_rows.
+            # Použijeme jejich výchozí vzor (employee_default_pattern) pro daný den v týdnu.
+            pattern_rows = db.execute(
+                """SELECT edp.employee_id, edp.department_id, dep.name as dept_name,
+                          COALESCE(dep.work_plan, 1) as work_plan
+                   FROM employee_default_pattern edp
+                   LEFT JOIN departments dep ON dep.id = edp.department_id
+                   WHERE edp.day_of_week = ? AND edp.department_id IS NOT NULL""",
+                (d.weekday(),)
+            ).fetchall()
+            for r in pattern_rows:
+                eid = r['employee_id']
+                if eid not in emp_planner_dept or not emp_planner_dept[eid]['dept_id']:
+                    emp_planner_dept[eid] = {
+                        'dept_id': r['department_id'],
+                        'dept_name': r['dept_name'] or '',
+                        'work_plan': r['work_plan'],
+                    }
+
             # Build flat list with dept info
             flat = [
                 {
