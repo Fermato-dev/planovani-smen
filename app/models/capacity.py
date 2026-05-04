@@ -350,15 +350,16 @@ def board_assign_to_task(plan_id, employee_id, date_str, task_id):
         return None
     dept_id = task['department_id']
 
+    # Hledáme existující assignment – přednostně is_absence=0, pak is_absence=1 (půldenní absence)
     existing = db.execute(
-        "SELECT id FROM assignments WHERE plan_id=? AND employee_id=? AND date=? AND is_absence=0",
+        "SELECT id, is_absence FROM assignments WHERE plan_id=? AND employee_id=? AND date=?",
         (plan_id, employee_id, date_str)
     ).fetchone()
     if existing:
         assignment_id = existing['id']
-        # Aktualizuj department i task_id → propisuje se do plánu směn
+        # Přepišeme na pracovní přiřazení (is_absence=0) a nastavíme department + task
         db.execute(
-            "UPDATE assignments SET department_id=?, task_id=? WHERE id=?",
+            "UPDATE assignments SET department_id=?, task_id=?, is_absence=0 WHERE id=?",
             (dept_id, task_id, assignment_id)
         )
     else:
