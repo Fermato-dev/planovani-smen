@@ -553,7 +553,7 @@ def get_unassigned_for_task(plan_id, date_str, task_id, show_all=False):
     from app.models.employee import get_all_employees, employee_works_on_day
 
     primary, other = [], []
-    for e in get_all_employees(active_only=True, exclude_brigada=True):
+    for e in get_all_employees(active_only=True, exclude_brigada=False):
         if e['id'] in on_board or e['id'] in absent or not employee_works_on_day(e, weekday):
             continue
         emp_data = {'id': e['id'], 'name': e['name'], 'color': _emp_color(e['id'])}

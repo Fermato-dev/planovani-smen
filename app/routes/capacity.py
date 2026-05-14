@@ -205,6 +205,36 @@ def board_view(week_start):
     except Exception:
         available = {}
 
+    # Brigádníci: rozdělit per den na k dispozici / na nástěnce / absenti
+    try:
+        brigada_all = [e for e in get_all_employees(active_only=True, exclude_brigada=False)
+                       if (e['emp_type'] or 'regular') == 'brigada']
+        brigada_per_day = {}
+        for d in dates:
+            ds = d.isoformat()
+            assigned_ids = set()
+            for dept_tasks in board.get(ds, {}).values():
+                for task_data in dept_tasks.values():
+                    for emp in task_data['employees']:
+                        assigned_ids.add(emp['employee_id'])
+            absent_ids_day = {e['employee_id'] for e in absent.get(ds, []) if not e.get('half_day')}
+            available_b, on_board_b, absent_b = [], [], []
+            for e in brigada_all:
+                if e['id'] in absent_ids_day:
+                    absent_b.append({'id': e['id'], 'name': e['name']})
+                elif e['id'] in assigned_ids:
+                    on_board_b.append({'id': e['id'], 'name': e['name']})
+                else:
+                    available_b.append({'id': e['id'], 'name': e['name']})
+            brigada_per_day[ds] = {
+                'available': available_b,
+                'on_board': on_board_b,
+                'absent': absent_b,
+            }
+    except Exception:
+        logger.exception("board_view: chyba při načítání brigádníků")
+        brigada_per_day = {d.isoformat(): {'available': [], 'on_board': [], 'absent': []} for d in dates}
+
     today = date.today().isoformat()
 
     return render_template(
@@ -226,6 +256,7 @@ def board_view(week_start):
         holiday_map=holiday_map,
         vacation_map=vacation_map,
         day_names=DAY_NAMES_CZ,
+        brigada_per_day=brigada_per_day,
     )
 
 

@@ -53,6 +53,7 @@ document.addEventListener('DOMContentLoaded', function () {
 {% set day_unassigned = unassigned.get(ds, []) %}
 {% set day_unassigned_total = unassigned_totals.get(ds, 0) %}
 {% set day_avail = available.get(ds, {}) %}
+{% set day_brigada = brigada_per_day.get(ds, {'available': [], 'on_board': [], 'absent': []}) %}
 {% set editable = not holiday_map.get(ds) and not vacation_map.get(ds) %}
 
 {# Počty na nástěnce per oddělení (napl = přiřazeni k práci) #}
@@ -235,6 +236,41 @@ document.addEventListener('DOMContentLoaded', function () {
         <div class="d-flex flex-wrap gap-1 mb-2">
             <span class="text-muted" style="font-size:.8rem;font-style:italic">Všichni přiřazeni</span>
         </div>
+    {% endif %}
+
+    {# ── Brigádníci ── #}
+    {% if day_brigada.available or day_brigada.on_board or day_brigada.absent %}
+    <div class="board-section-title mt-2" style="border-top:1px dashed var(--fm-border);padding-top:.5rem">
+        <i class="bi bi-person-badge" style="font-size:.85rem"></i> Brigádníci
+    </div>
+    {% if day_brigada.available %}
+    <div class="d-flex flex-wrap gap-1 mb-1 align-items-center">
+        {% for b in day_brigada.available %}
+        <span class="board-unassigned-chip" style="border-left:3px solid #9ca3af;font-style:normal">
+            {{ b.name }}
+            <a href="{{ url_for('employees.detail', emp_id=b.id) }}" class="ms-1 text-muted" style="font-size:.65rem" title="Detail">↗</a>
+        </span>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-muted mb-1" style="font-size:.78rem;font-style:italic">Žádný brigádník k dispozici</div>
+    {% endif %}
+    {% if day_brigada.on_board %}
+    <div style="font-size:.68rem;color:var(--fm-text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Na práci</div>
+    <div class="d-flex flex-wrap gap-1 mb-1">
+        {% for b in day_brigada.on_board %}
+        <span class="board-unassigned-chip" style="border-left:3px solid #6366f1;opacity:.7">{{ b.name }}</span>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% if day_brigada.absent %}
+    <div style="font-size:.68rem;color:var(--fm-text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Nedostupní</div>
+    <div class="d-flex flex-wrap gap-1 mb-1">
+        {% for b in day_brigada.absent %}
+        <span class="board-absent-card" style="opacity:.7">{{ b.name }}</span>
+        {% endfor %}
+    </div>
+    {% endif %}
     {% endif %}
 
     {# ── Absence ── #}
