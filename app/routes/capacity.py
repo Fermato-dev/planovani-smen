@@ -111,7 +111,7 @@ def board_view(week_start):
     try:
         from app.db import get_db
         from app.models.capacity import _emp_color
-        all_emps = get_all_employees(active_only=True)
+        all_emps = get_all_employees(active_only=True, exclude_brigada=True)
         db = get_db()
         unassigned = {}
         unassigned_totals = {}
@@ -162,7 +162,7 @@ def board_view(week_start):
                         'work_plan': r['work_plan'],
                     }
 
-            # Build flat list with dept info (brigádníci mají vlastní sekci – zde je vynecháme)
+            # Build flat list with dept info (brigádníci jsou vyloučeni přes exclude_brigada=True)
             flat = [
                 {
                     'employee_id': e['id'],
@@ -176,7 +176,6 @@ def board_view(week_start):
                 if e['id'] not in assigned_ids
                 and e['id'] not in absent_ids
                 and employee_works_on_day(e, d.weekday())
-                and (e['emp_type'] if 'emp_type' in e.keys() else 'regular') != 'brigada'
             ]
             unassigned_totals[ds] = len(flat)
 

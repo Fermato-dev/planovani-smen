@@ -1,13 +1,18 @@
 from app.db import get_db
 
 
-def get_all_employees(active_only=True):
+def get_all_employees(active_only=True, exclude_brigada=False):
     db = get_db()
     q = """SELECT e.*, st.name as shift_name, st.start_time, st.end_time
            FROM employees e
            LEFT JOIN shift_templates st ON e.default_shift_id = st.id"""
+    conditions = []
     if active_only:
-        q += " WHERE e.active = 1"
+        conditions.append("e.active = 1")
+    if exclude_brigada:
+        conditions.append("(e.emp_type IS NULL OR e.emp_type != 'brigada')")
+    if conditions:
+        q += " WHERE " + " AND ".join(conditions)
     q += " ORDER BY e.sort_order, e.name"
     return db.execute(q).fetchall()
 
