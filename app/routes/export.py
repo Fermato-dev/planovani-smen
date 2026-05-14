@@ -46,13 +46,13 @@ def print_week(week_start):
 
     mode = request.args.get('mode', 'pdf')  # 'pdf' or 'board'
 
-    grid, _brigada_grid, dates = build_plan_grid(plan['id'], week_start)
+    grid, brigada_grid, dates = build_plan_grid(plan['id'], week_start)
     summary, task_summary = get_staffing_summary(plan['id'], dates)
     req_map = get_requirements_map(plan['id'], dates)
     shifts = get_all_shifts()
 
     return render_template('planner/week_print.html',
-                           plan=plan, grid=grid, dates=dates,
+                           plan=plan, grid=grid, brigada_grid=brigada_grid, dates=dates,
                            summary=summary, task_summary=task_summary,
                            req_map=req_map, shifts=shifts,
                            day_names=DAY_NAMES,

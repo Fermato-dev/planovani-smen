@@ -440,11 +440,11 @@ def send_email(plan_id):
         week_start_str1 = ws1.isoformat()
 
         # --- Week 1 (current) ---
-        grid1, _bg1, dates1 = build_plan_grid(plan_id, week_start_str1)
+        grid1, bg1, dates1 = build_plan_grid(plan_id, week_start_str1)
         summary1, task_summary1 = get_staffing_summary(plan_id, dates1)
         req_map1 = get_requirements_map(plan_id, dates1)
         html1_str = render_template('planner/week_print.html',
-                                    plan=plan, grid=grid1, dates=dates1,
+                                    plan=plan, grid=grid1, brigada_grid=bg1, dates=dates1,
                                     summary=summary1, task_summary=task_summary1,
                                     req_map=req_map1, shifts=shifts,
                                     day_names=DAY_NAMES,
@@ -458,11 +458,11 @@ def send_email(plan_id):
         next_plan_id, _ = create_or_get_plan(next_ws)
         next_plan = get_plan(next_plan_id)
 
-        grid2, _bg2, dates2 = build_plan_grid(next_plan_id, next_ws)
+        grid2, bg2, dates2 = build_plan_grid(next_plan_id, next_ws)
         summary2, task_summary2 = get_staffing_summary(next_plan_id, dates2)
         req_map2 = get_requirements_map(next_plan_id, dates2)
         html2_str = render_template('planner/week_print.html',
-                                    plan=next_plan, grid=grid2, dates=dates2,
+                                    plan=next_plan, grid=grid2, brigada_grid=bg2, dates=dates2,
                                     summary=summary2, task_summary=task_summary2,
                                     req_map=req_map2, shifts=shifts,
                                     day_names=DAY_NAMES,
