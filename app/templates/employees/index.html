@@ -47,13 +47,19 @@
                         {% endif %}
                     </td>
                     <td class="text-end">
-                        <a href="{{ url_for('employees.edit', emp_id=emp.id) }}" class="btn btn-action btn-outline-secondary">
+                        <a href="{{ url_for('employees.edit', emp_id=emp.id) }}" class="btn btn-action btn-outline-secondary" title="Upravit">
                             <i class="bi bi-pencil"></i>
                         </a>
                         <form method="POST" action="{{ url_for('employees.toggle', emp_id=emp.id) }}" class="d-inline">
                             <button class="btn btn-action btn-outline-{{ 'warning' if emp.active else 'success' }}"
                                     title="{{ 'Deaktivovat' if emp.active else 'Aktivovat' }}">
                                 <i class="bi bi-{{ 'eye-slash' if emp.active else 'eye' }}"></i>
+                            </button>
+                        </form>
+                        <form method="POST" action="{{ url_for('employees.hard_delete', emp_id=emp.id) }}" class="d-inline"
+                              onsubmit="return confirm('Natvrdo smazat {{ emp.name }}?\n\nSmaže se zaměstnanec i všechna jeho data (směny, přiřazení, omezení). Tato akce je nevratná!')">
+                            <button type="submit" class="btn btn-action btn-outline-danger" title="Smazat natvrdo">
+                                <i class="bi bi-trash3"></i>
                             </button>
                         </form>
                     </td>

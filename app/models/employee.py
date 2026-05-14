@@ -70,6 +70,7 @@ def hard_delete_employee(emp_id):
     db.execute("DELETE FROM constraints WHERE employee_id = ?", (emp_id,))
     db.execute("DELETE FROM employee_qualifications WHERE employee_id = ?", (emp_id,))
     db.execute("DELETE FROM employee_default_pattern WHERE employee_id = ?", (emp_id,))
+    db.execute("DELETE FROM employee_availabilities WHERE employee_id = ?", (emp_id,))
     db.execute("DELETE FROM employees WHERE id = ?", (emp_id,))
     db.commit()
 
