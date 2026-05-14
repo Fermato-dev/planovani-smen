@@ -38,8 +38,8 @@
             <div class="card-header">Základní údaje</div>
             <div class="card-body">
                 {% if employee['emp_type'] == 'brigada' %}
-                <div class="alert alert-info py-1 px-2 mb-2" style="font-size:.85rem">
-                    <i class="bi bi-person-badge"></i> <strong>Brigádník</strong> – dostupnost se zadává níže
+                <div class="mb-2">
+                    <span class="badge bg-info text-dark"><i class="bi bi-person-badge"></i> Brigádník</span>
                 </div>
                 {% endif %}
                 <dl class="mb-0">
@@ -79,6 +79,57 @@
                 {% endif %}
             </div>
         </div>
+
+        {% if employee['emp_type'] == 'brigada' %}
+        <div class="card mt-3">
+            <div class="card-header"><i class="bi bi-calendar-x"></i> Nedostupnost</div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('employees.add_brigada_absence', emp_id=employee.id) }}" class="mb-3">
+                    <div class="row g-1 mb-1">
+                        <div class="col-6">
+                            <label class="form-label mb-1 small">Od</label>
+                            <input type="date" name="date_from" class="form-control form-control-sm" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label mb-1 small">Do</label>
+                            <input type="date" name="date_to" class="form-control form-control-sm" required>
+                        </div>
+                    </div>
+                    <div class="mb-1">
+                        <select name="type" class="form-select form-select-sm">
+                            <option value="jine">Jiné</option>
+                            <option value="dovolena">Dovolená</option>
+                            <option value="nemoc">Nemoc</option>
+                            <option value="osobni">Osobní volno</option>
+                        </select>
+                    </div>
+                    <div class="mb-2">
+                        <input type="text" name="note" class="form-control form-control-sm" placeholder="Poznámka (nepovinné)">
+                    </div>
+                    <button type="submit" class="btn btn-sm btn-primary w-100"><i class="bi bi-plus-lg"></i> Přidat nedostupnost</button>
+                </form>
+                {% if absences %}
+                <div class="list-group list-group-flush">
+                    {% for c in absences %}
+                    <div class="list-group-item px-0 py-1 d-flex justify-content-between align-items-start">
+                        <div style="font-size:.82rem">
+                            <span class="badge bg-secondary me-1">{{ c.type }}</span>
+                            <strong>{{ c.date_from }}</strong>
+                            {% if c.date_to != c.date_from %} – {{ c.date_to }}{% endif %}
+                            {% if c.note %}<br><span class="text-muted">{{ c.note }}</span>{% endif %}
+                        </div>
+                        <form method="POST" action="{{ url_for('employees.delete_brigada_absence', constraint_id=c.id) }}" class="d-inline ms-1">
+                            <button type="submit" class="btn btn-xs btn-outline-danger" onclick="return confirm('Smazat?')">×</button>
+                        </form>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted mb-0" style="font-size:.82rem">Standardně k dispozici.</p>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
     </div>
 
     <!-- Default Pattern -->
@@ -195,66 +246,6 @@
         </div>
     </div>
 
-    {% if employee['emp_type'] == 'brigada' %}
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <span><i class="bi bi-calendar-x"></i> Nedostupnost brigádníka</span>
-                <small class="text-muted">Kdy nemůže přijít — jinak je standardně k dispozici</small>
-            </div>
-            <div class="card-body">
-                <form method="POST" action="{{ url_for('employees.add_brigada_absence', emp_id=employee.id) }}" class="row g-2 align-items-end mb-3">
-                    <div class="col-auto">
-                        <label class="form-label mb-1 small">Od</label>
-                        <input type="date" name="date_from" class="form-control form-control-sm" required>
-                    </div>
-                    <div class="col-auto">
-                        <label class="form-label mb-1 small">Do <span class="text-muted">(nebo tentýž den)</span></label>
-                        <input type="date" name="date_to" class="form-control form-control-sm" required>
-                    </div>
-                    <div class="col-auto">
-                        <label class="form-label mb-1 small">Důvod</label>
-                        <select name="type" class="form-select form-select-sm">
-                            <option value="jine">Jiné</option>
-                            <option value="dovolena">Dovolená</option>
-                            <option value="nemoc">Nemoc</option>
-                            <option value="osobni">Osobní volno</option>
-                        </select>
-                    </div>
-                    <div class="col">
-                        <label class="form-label mb-1 small">Poznámka</label>
-                        <input type="text" name="note" class="form-control form-control-sm" placeholder="nepovinné">
-                    </div>
-                    <div class="col-auto">
-                        <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-plus-lg"></i> Přidat</button>
-                    </div>
-                </form>
-                {% if absences %}
-                <table class="table table-sm table-hover mb-0">
-                    <thead><tr><th>Od</th><th>Do</th><th>Typ</th><th>Poznámka</th><th></th></tr></thead>
-                    <tbody>
-                    {% for c in absences %}
-                    <tr>
-                        <td>{{ c.date_from }}</td>
-                        <td>{{ c.date_to }}</td>
-                        <td><span class="badge bg-secondary">{{ c.type }}</span></td>
-                        <td class="text-muted" style="font-size:.85rem">{{ c.note or '' }}</td>
-                        <td>
-                            <form method="POST" action="{{ url_for('employees.delete_brigada_absence', constraint_id=c.id) }}" class="d-inline">
-                                <button type="submit" class="btn btn-xs btn-outline-danger" onclick="return confirm('Smazat?')">×</button>
-                            </form>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
-                {% else %}
-                <p class="text-muted mb-0" style="font-size:.9rem">Žádná nedostupnost zadána — brigádník je standardně k dispozici.</p>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-    {% endif %}
 
 </div>
 {% endblock %}
