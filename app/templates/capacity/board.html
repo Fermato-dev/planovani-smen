@@ -273,9 +273,10 @@ document.addEventListener('DOMContentLoaded', function () {
     {% endif %}
     {% endif %}
 
-    {# ── Absence ── #}
-    {% set full_absent = day_absent | selectattr('half_day', 'false') | list %}
-    {% set half_absent = day_absent | selectattr('half_day') | list %}
+    {# ── Absence ── (brigádníci jsou zobrazeni výše, zde se nezobrazují) #}
+    {% set brigada_ids = day_brigada.absent | map(attribute='id') | list %}
+    {% set full_absent = day_absent | selectattr('half_day', 'false') | rejectattr('employee_id', 'in', brigada_ids) | list %}
+    {% set half_absent = day_absent | selectattr('half_day') | rejectattr('employee_id', 'in', brigada_ids) | list %}
     {% if full_absent or half_absent %}
     <div class="board-section-title">Absence</div>
     <div class="d-flex flex-wrap gap-1 mb-1">
