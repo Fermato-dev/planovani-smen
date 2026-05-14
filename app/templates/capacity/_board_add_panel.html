@@ -34,6 +34,27 @@
   </button>
   {% endif %}
 
-  <button type="button" class="btn btn-link text-muted p-0 ms-2" style="font-size:.75rem"
+  {% if brigada %}
+  <div style="border-top:1px dashed #cbd5e1;margin:.4rem 0 .3rem;padding-top:.3rem;">
+    <span style="font-size:.68rem;font-weight:700;color:#6366f1;text-transform:uppercase;letter-spacing:.05em">
+      <i class="bi bi-person-badge"></i> Brigádníci
+    </span>
+    <span style="font-size:.65rem;color:#94a3b8;margin-left:.3rem">(nepovinní)</span>
+  </div>
+  <div class="d-flex flex-wrap gap-1 mb-1">
+    {% for e in brigada %}
+    <form method="POST" action="{{ url_for('capacity.board_assign_to_task_view') }}" class="d-inline">
+      <input type="hidden" name="week_start" value="{{ week_start }}">
+      <input type="hidden" name="plan_id" value="{{ plan_id }}">
+      <input type="hidden" name="date_str" value="{{ date_str }}">
+      <input type="hidden" name="task_id" value="{{ task_id }}">
+      <input type="hidden" name="employee_id" value="{{ e.id }}">
+      <button type="submit" class="assign-emp-btn" style="background:#9ca3af;border:1px dashed #6b7280">{{ e.name }}</button>
+    </form>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <button type="button" class="btn btn-link text-muted p-0 ms-1" style="font-size:.75rem"
     onclick="document.getElementById('emp-panel-{{ date_str }}-{{ task_id }}').innerHTML=''">zavřít</button>
 </div>

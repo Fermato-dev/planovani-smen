@@ -552,25 +552,27 @@ def get_unassigned_for_task(plan_id, date_str, task_id, show_all=False):
 
     from app.models.employee import get_all_employees, employee_works_on_day
 
-    primary, other = [], []
+    primary, other, brigada = [], [], []
     for e in get_all_employees(active_only=True, exclude_brigada=False):
         if e['id'] in on_board or e['id'] in absent or not employee_works_on_day(e, weekday):
             continue
         emp_data = {'id': e['id'], 'name': e['name'], 'color': _emp_color(e['id'])}
+        # Brigádníci vždy do vlastní skupiny
+        if (e['emp_type'] or 'regular') == 'brigada':
+            brigada.append(emp_data)
+            continue
         info = emp_plan_dept.get(e['id'])
         if info and info['dept_id']:
-            # Má předvyplněné oddělení — zařaď podle shody work_plan
             if info['work_plan'] == task_work_plan:
                 primary.append(emp_data)
             else:
                 other.append(emp_data)
         else:
-            # Bez přiřazeného oddělení → nabídnout vždy primárně
             primary.append(emp_data)
 
     if show_all:
-        return primary + other, 0
-    return primary, len(other)
+        return primary + other, 0, brigada
+    return primary, len(other), brigada
 
 
 def board_set_note(assignment_id, note):
