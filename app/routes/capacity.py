@@ -162,7 +162,7 @@ def board_view(week_start):
                         'work_plan': r['work_plan'],
                     }
 
-            # Build flat list with dept info
+            # Build flat list with dept info (brigádníci mají vlastní sekci – zde je vynecháme)
             flat = [
                 {
                     'employee_id': e['id'],
@@ -176,6 +176,7 @@ def board_view(week_start):
                 if e['id'] not in assigned_ids
                 and e['id'] not in absent_ids
                 and employee_works_on_day(e, d.weekday())
+                and (e['emp_type'] if 'emp_type' in e.keys() else 'regular') != 'brigada'
             ]
             unassigned_totals[ds] = len(flat)
 
@@ -198,6 +199,18 @@ def board_view(week_start):
     except Exception:
         logger.exception("board_view: chyba při výpočtu nepřiřazených")
         raise
+
+    # Brigádníci: dostupnost per den (jen ti s availability záznamem a status != not_needed)
+    try:
+        from app.models.employee import get_availabilities_for_date
+        brigada = {}
+        for d in dates:
+            ds = d.isoformat()
+            rows = get_availabilities_for_date(ds)
+            brigada[ds] = [dict(r) for r in rows]
+    except Exception:
+        logger.exception("board_view: chyba při načítání brigádníků")
+        brigada = {d.isoformat(): [] for d in dates}
 
     # Available per day for summary badges
     try:
@@ -226,6 +239,7 @@ def board_view(week_start):
         holiday_map=holiday_map,
         vacation_map=vacation_map,
         day_names=DAY_NAMES_CZ,
+        brigada=brigada,
     )
 
 

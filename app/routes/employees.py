@@ -3,7 +3,8 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash
 from app.models.employee import (
     get_all_employees, get_employee, create_employee, update_employee, delete_employee,
     hard_delete_employee,
-    get_qualifications, set_qualifications, get_default_pattern, set_default_pattern
+    get_qualifications, set_qualifications, get_default_pattern, set_default_pattern,
+    get_availabilities_for_employee, add_availability, delete_availability, update_availability_status
 )
 from app.models.department import get_all_departments, get_all_tasks, get_tasks_for_department
 from app.models.shift import get_all_shifts
@@ -61,11 +62,15 @@ def detail(emp_id):
             'department_id': p['department_id']
         } for p in pattern if p['department_id']
     })
+    from datetime import date as _date
+    today_str = _date.today().isoformat()
+    availabilities = get_availabilities_for_employee(emp_id, from_date=today_str)
     return render_template('employees/detail.html',
                            employee=employee, qualifications=qualifications,
                            pattern=pattern_dict, departments=departments,
                            shifts=shifts, day_names=DAY_NAMES,
-                           pattern_json=pattern_json)
+                           pattern_json=pattern_json,
+                           availabilities=availabilities)
 
 
 @bp.route('/<int:emp_id>/edit', methods=['GET', 'POST'])
@@ -91,7 +96,8 @@ def edit(emp_id):
         # Pracovní dny: checkboxy 0-6, NULL = všechny
         work_days_list = request.form.getlist('work_days')
         work_days = ','.join(sorted(work_days_list)) if work_days_list else None
-        update_employee(emp_id, name=name, default_shift_id=default_shift_id, note=note, email=email, work_days=work_days)
+        emp_type = request.form.get('emp_type', 'regular')
+        update_employee(emp_id, name=name, default_shift_id=default_shift_id, note=note, email=email, work_days=work_days, emp_type=emp_type)
         _save_qualifications(emp_id)
         flash(f'Zaměstnanec {name} aktualizován.', 'success')
         return redirect(url_for('employees.detail', emp_id=emp_id))
@@ -158,6 +164,51 @@ def api_tasks(dept_id):
     for t in tasks:
         html += f'<option value="{t["id"]}">{t["name"]}</option>'
     return html
+
+
+@bp.route('/<int:emp_id>/availability', methods=['POST'])
+def add_availability_route(emp_id):
+    date = request.form.get('date', '').strip()
+    time_from = request.form.get('time_from', '').strip()
+    time_to = request.form.get('time_to', '').strip()
+    note = request.form.get('note', '').strip()
+    if date:
+        add_availability(emp_id, date, time_from, time_to, note)
+        flash('Dostupnost přidána.', 'success')
+    else:
+        flash('Zadejte datum.', 'error')
+    return redirect(url_for('employees.detail', emp_id=emp_id))
+
+
+@bp.route('/availability/<int:avail_id>/delete', methods=['POST'])
+def delete_availability_route(avail_id):
+    from app.db import get_db
+    db = get_db()
+    row = db.execute("SELECT employee_id FROM employee_availabilities WHERE id=?", (avail_id,)).fetchone()
+    delete_availability(avail_id)
+    if row:
+        flash('Dostupnost smazána.', 'success')
+        return redirect(url_for('employees.detail', emp_id=row['employee_id']))
+    return redirect(url_for('employees.index'))
+
+
+@bp.route('/availability/<int:avail_id>/status', methods=['POST'])
+def set_availability_status(avail_id):
+    """Změna stavu dostupnosti – voláno z nástěnky i detailu."""
+    status = request.form.get('status', 'available')
+    week_start = request.form.get('week_start', '')
+    date_str = request.form.get('date_str', '')
+    update_availability_status(avail_id, status)
+    if week_start:
+        from flask import redirect as _r
+        return _r(url_for('capacity.board_view', week_start=week_start) + f'#tab-{date_str}')
+    # Fallback: redirect to employee detail
+    from app.db import get_db
+    db = get_db()
+    row = db.execute("SELECT employee_id FROM employee_availabilities WHERE id=?", (avail_id,)).fetchone()
+    if row:
+        return redirect(url_for('employees.detail', emp_id=row['employee_id']))
+    return redirect(url_for('employees.index'))
 
 
 def _save_qualifications(emp_id):

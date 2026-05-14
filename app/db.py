@@ -220,6 +220,28 @@ def _migrate_db(db):
             db.execute("ALTER TABLE constraints ADD COLUMN half_day INTEGER DEFAULT 0")
             db.commit()
 
+    # Brigádníci: typ zaměstnance
+    if 'employees' in tables:
+        emp_cols2 = [r[1] for r in db.execute("PRAGMA table_info(employees)").fetchall()]
+        if 'emp_type' not in emp_cols2:
+            db.execute("ALTER TABLE employees ADD COLUMN emp_type TEXT NOT NULL DEFAULT 'regular'")
+            db.commit()
+
+    # Brigádníci: dostupnost per konkrétní datum
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS employee_availabilities (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            employee_id INTEGER NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+            date TEXT NOT NULL,
+            time_from TEXT DEFAULT '',
+            time_to TEXT DEFAULT '',
+            status TEXT NOT NULL DEFAULT 'available',
+            note TEXT DEFAULT '',
+            UNIQUE(employee_id, date)
+        )
+    """)
+    db.commit()
+
     # Vazba fixního bloku na oddělení (pro auto-načítání z rozpisu)
     if 'capacity_block_types' in tables:
         bt_cols = [r[1] for r in db.execute("PRAGMA table_info(capacity_block_types)").fetchall()]

@@ -42,7 +42,7 @@ def update_employee(emp_id, **kwargs):
     fields = []
     values = []
     for key, val in kwargs.items():
-        if key in ('name', 'default_shift_id', 'active', 'note', 'email', 'sort_order', 'work_days'):
+        if key in ('name', 'default_shift_id', 'active', 'note', 'email', 'sort_order', 'work_days', 'emp_type'):
             fields.append(f"{key} = ?")
             values.append(val)
     if fields:
@@ -168,6 +168,65 @@ def get_qualified_tasks(emp_id, dept_id):
                ORDER BY t.name""",
             (emp_id, dept_id)
         ).fetchall()
+
+
+# --- Brigádníci: dostupnost ---
+
+def get_availabilities_for_employee(emp_id, from_date=None):
+    """Vrátí záznamy dostupnosti brigádníka, od dnešního data nebo od zadaného data."""
+    db = get_db()
+    if from_date:
+        return db.execute(
+            "SELECT * FROM employee_availabilities WHERE employee_id=? AND date >= ? ORDER BY date",
+            (emp_id, from_date)
+        ).fetchall()
+    return db.execute(
+        "SELECT * FROM employee_availabilities WHERE employee_id=? ORDER BY date",
+        (emp_id,)
+    ).fetchall()
+
+
+def add_availability(emp_id, date, time_from='', time_to='', note=''):
+    """Přidá záznam dostupnosti brigádníka. Přepíše existující pro stejný den."""
+    db = get_db()
+    db.execute(
+        """INSERT INTO employee_availabilities (employee_id, date, time_from, time_to, note, status)
+           VALUES (?,?,?,?,?,'available')
+           ON CONFLICT(employee_id, date) DO UPDATE SET
+               time_from=excluded.time_from, time_to=excluded.time_to,
+               note=excluded.note, status='available'""",
+        (emp_id, date, time_from, time_to, note)
+    )
+    db.commit()
+
+
+def delete_availability(avail_id):
+    db = get_db()
+    db.execute("DELETE FROM employee_availabilities WHERE id=?", (avail_id,))
+    db.commit()
+
+
+def update_availability_status(avail_id, status):
+    """Nastaví stav dostupnosti: 'available', 'confirmed', 'not_needed'."""
+    if status not in ('available', 'confirmed', 'not_needed'):
+        return
+    db = get_db()
+    db.execute("UPDATE employee_availabilities SET status=? WHERE id=?", (status, avail_id))
+    db.commit()
+
+
+def get_availabilities_for_date(date_str):
+    """Vrátí brigádníky dostupné v konkrétní den (status != not_needed)."""
+    db = get_db()
+    return db.execute(
+        """SELECT ea.id as avail_id, ea.employee_id, ea.time_from, ea.time_to,
+                  ea.status, ea.note, e.name
+           FROM employee_availabilities ea
+           JOIN employees e ON e.id = ea.employee_id
+           WHERE ea.date = ? AND ea.status != 'not_needed' AND e.active = 1
+           ORDER BY ea.status DESC, e.name""",
+        (date_str,)
+    ).fetchall()
 
 
 # --- Default Pattern ---
