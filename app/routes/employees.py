@@ -1,11 +1,12 @@
 import json
+from datetime import date as _date
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from app.models.employee import (
     get_all_employees, get_employee, create_employee, update_employee, delete_employee,
     hard_delete_employee,
     get_qualifications, set_qualifications, get_default_pattern, set_default_pattern,
-    get_availabilities_for_employee, add_availability, delete_availability, update_availability_status
 )
+from app.models.constraint import get_all_constraints, create_constraint, delete_constraint
 from app.models.department import get_all_departments, get_all_tasks, get_tasks_for_department
 from app.models.shift import get_all_shifts
 
@@ -63,15 +64,13 @@ def detail(emp_id):
             'department_id': p['department_id']
         } for p in pattern if p['department_id']
     })
-    from datetime import date as _date
-    today_str = _date.today().isoformat()
-    availabilities = get_availabilities_for_employee(emp_id, from_date=today_str)
+    absences = get_all_constraints(employee_id=emp_id)
     return render_template('employees/detail.html',
                            employee=employee, qualifications=qualifications,
                            pattern=pattern_dict, departments=departments,
                            shifts=shifts, day_names=DAY_NAMES,
                            pattern_json=pattern_json,
-                           availabilities=availabilities)
+                           absences=absences)
 
 
 @bp.route('/<int:emp_id>/edit', methods=['GET', 'POST'])
@@ -167,47 +166,32 @@ def api_tasks(dept_id):
     return html
 
 
-@bp.route('/<int:emp_id>/availability', methods=['POST'])
-def add_availability_route(emp_id):
-    date = request.form.get('date', '').strip()
-    time_from = request.form.get('time_from', '').strip()
-    time_to = request.form.get('time_to', '').strip()
+@bp.route('/<int:emp_id>/absence', methods=['POST'])
+def add_brigada_absence(emp_id):
+    """Přidá nedostupnost brigádníka (constraint) s rozsahem dat."""
+    date_from = request.form.get('date_from', '').strip()
+    date_to = request.form.get('date_to', '').strip()
+    absence_type = request.form.get('type', 'jine')
     note = request.form.get('note', '').strip()
-    if date:
-        add_availability(emp_id, date, time_from, time_to, note)
-        flash('Dostupnost přidána.', 'success')
-    else:
-        flash('Zadejte datum.', 'error')
+    if not date_from or not date_to:
+        flash('Zadejte datum od i do.', 'error')
+        return redirect(url_for('employees.detail', emp_id=emp_id))
+    if date_to < date_from:
+        date_to = date_from
+    create_constraint(emp_id, date_from, date_to, absence_type, note=note)
+    flash('Nedostupnost přidána.', 'success')
     return redirect(url_for('employees.detail', emp_id=emp_id))
 
 
-@bp.route('/availability/<int:avail_id>/delete', methods=['POST'])
-def delete_availability_route(avail_id):
+@bp.route('/absence/<int:constraint_id>/delete', methods=['POST'])
+def delete_brigada_absence(constraint_id):
+    """Smaže záznam nedostupnosti brigádníka."""
     from app.db import get_db
     db = get_db()
-    row = db.execute("SELECT employee_id FROM employee_availabilities WHERE id=?", (avail_id,)).fetchone()
-    delete_availability(avail_id)
+    row = db.execute("SELECT employee_id FROM constraints WHERE id=?", (constraint_id,)).fetchone()
+    delete_constraint(constraint_id)
     if row:
-        flash('Dostupnost smazána.', 'success')
-        return redirect(url_for('employees.detail', emp_id=row['employee_id']))
-    return redirect(url_for('employees.index'))
-
-
-@bp.route('/availability/<int:avail_id>/status', methods=['POST'])
-def set_availability_status(avail_id):
-    """Změna stavu dostupnosti – voláno z nástěnky i detailu."""
-    status = request.form.get('status', 'available')
-    week_start = request.form.get('week_start', '')
-    date_str = request.form.get('date_str', '')
-    update_availability_status(avail_id, status)
-    if week_start:
-        from flask import redirect as _r
-        return _r(url_for('capacity.board_view', week_start=week_start) + f'#tab-{date_str}')
-    # Fallback: redirect to employee detail
-    from app.db import get_db
-    db = get_db()
-    row = db.execute("SELECT employee_id FROM employee_availabilities WHERE id=?", (avail_id,)).fetchone()
-    if row:
+        flash('Nedostupnost smazána.', 'success')
         return redirect(url_for('employees.detail', emp_id=row['employee_id']))
     return redirect(url_for('employees.index'))
 

@@ -63,39 +63,47 @@ def create_or_get_plan(week_start):
 
 
 def build_plan_grid(plan_id, week_start):
-    """Build the planning grid data structure: employees × days with assignments."""
-    employees = get_all_employees(active_only=True, exclude_brigada=True)
+    """Build the planning grid data structure: employees × days with assignments.
+
+    Returns (grid, brigada_grid, dates) where grid contains regular employees
+    and brigada_grid contains brigádníci in their own section.
+    """
+    all_employees = get_all_employees(active_only=True, exclude_brigada=False)
+    regular_emps = [e for e in all_employees if (e['emp_type'] or 'regular') != 'brigada']
+    brigada_emps  = [e for e in all_employees if (e['emp_type'] or 'regular') == 'brigada']
+
     assignments = get_assignments_for_plan(plan_id)
     dates = get_week_dates(week_start)
 
     # Index assignments by (employee_id, date_string)
     assignment_map = {}
     for a in assignments:
-        # Normalize date to string (sqlite may return date object or string)
         d_val = a['date']
         d_str = d_val.isoformat() if hasattr(d_val, 'isoformat') else str(d_val)
         key = (a['employee_id'], d_str)
         assignment_map[key] = dict(a)
 
-    grid = []
-    for emp in employees:
-        row = {
-            'employee': dict(emp),
-            'days': []
-        }
-        for d in dates:
-            key = (emp['id'], d.isoformat())
-            cell = assignment_map.get(key)
-            row['days'].append({
-                'date': d,
-                'date_str': d.isoformat(),
-                'assignment': cell,
-                'is_weekend': d.weekday() >= 5,
-                'works_on_day': employee_works_on_day(emp, d.weekday())
-            })
-        grid.append(row)
+    def _make_grid(emps):
+        rows = []
+        for emp in emps:
+            row = {'employee': dict(emp), 'days': []}
+            for d in dates:
+                key = (emp['id'], d.isoformat())
+                cell = assignment_map.get(key)
+                row['days'].append({
+                    'date': d,
+                    'date_str': d.isoformat(),
+                    'assignment': cell,
+                    'is_weekend': d.weekday() >= 5,
+                    'works_on_day': employee_works_on_day(emp, d.weekday())
+                })
+            rows.append(row)
+        return rows
 
-    return grid, dates
+    grid = _make_grid(regular_emps)
+    brigada_grid = _make_grid(brigada_emps)
+
+    return grid, brigada_grid, dates
 
 
 def get_staffing_summary(plan_id, dates):

@@ -66,7 +66,7 @@ def week_view(week_start):
         flash('Nový plán vytvořen a předvyplněn z výchozích vzorů.', 'success')
 
     plan = get_plan(plan_id)
-    grid, dates = build_plan_grid(plan_id, week_start)
+    grid, brigada_grid, dates = build_plan_grid(plan_id, week_start)
     summary, task_summary = get_staffing_summary(plan_id, dates)
     work_plan_map = has_entries_map(plan_id, dates)
     departments = get_all_departments()
@@ -131,7 +131,7 @@ def week_view(week_start):
     company_vacations = get_company_vacations_for_week(dates)
 
     return render_template('planner/week.html',
-                           plan=plan, grid=grid, dates=dates,
+                           plan=plan, grid=grid, brigada_grid=brigada_grid, dates=dates,
                            summary=summary, task_summary=task_summary,
                            work_plan_map=work_plan_map,
                            departments=departments,
@@ -440,7 +440,7 @@ def send_email(plan_id):
         week_start_str1 = ws1.isoformat()
 
         # --- Week 1 (current) ---
-        grid1, dates1 = build_plan_grid(plan_id, week_start_str1)
+        grid1, _bg1, dates1 = build_plan_grid(plan_id, week_start_str1)
         summary1, task_summary1 = get_staffing_summary(plan_id, dates1)
         req_map1 = get_requirements_map(plan_id, dates1)
         html1_str = render_template('planner/week_print.html',
@@ -458,7 +458,7 @@ def send_email(plan_id):
         next_plan_id, _ = create_or_get_plan(next_ws)
         next_plan = get_plan(next_plan_id)
 
-        grid2, dates2 = build_plan_grid(next_plan_id, next_ws)
+        grid2, _bg2, dates2 = build_plan_grid(next_plan_id, next_ws)
         summary2, task_summary2 = get_staffing_summary(next_plan_id, dates2)
         req_map2 = get_requirements_map(next_plan_id, dates2)
         html2_str = render_template('planner/week_print.html',

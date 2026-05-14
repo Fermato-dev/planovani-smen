@@ -237,51 +237,6 @@ document.addEventListener('DOMContentLoaded', function () {
         </div>
     {% endif %}
 
-    {# ── Brigádníci ── #}
-    {% set day_brigada = brigada.get(ds, []) %}
-    {% if day_brigada %}
-    <div class="board-section-title mt-2" style="border-top:1px dashed #ccc;padding-top:.4rem">
-        Brigádníci
-        <span class="badge bg-secondary" style="font-size:.7rem;vertical-align:middle">{{ day_brigada|length }}</span>
-    </div>
-    <div class="d-flex flex-wrap gap-1 mb-2 align-items-center">
-        {% for b in day_brigada %}
-        <div class="d-flex align-items-center gap-1 mb-1">
-            <span class="board-unassigned-chip brigada-chip {{ 'brigada-confirmed' if b.status == 'confirmed' else '' }}"
-                  title="{{ 'Potvrzeno' if b.status == 'confirmed' else 'K dispozici' }}">
-                {{ b.name }}
-                {% if b.time_from or b.time_to %}
-                <span class="brigada-time">{{ b.time_from or '' }}{% if b.time_to %}–{{ b.time_to }}{% endif %}</span>
-                {% endif %}
-            </span>
-            {% if editable %}
-            {% if b.status == 'available' %}
-            <form method="POST" action="{{ url_for('employees.set_availability_status', avail_id=b.avail_id) }}" class="d-inline m-0">
-                <input type="hidden" name="status" value="confirmed">
-                <input type="hidden" name="week_start" value="{{ week_start }}">
-                <input type="hidden" name="date_str" value="{{ ds }}">
-                <button type="submit" class="btn-brigada-action btn-brigada-confirm" title="Potvrdit – zavoláme ho">✓</button>
-            </form>
-            <form method="POST" action="{{ url_for('employees.set_availability_status', avail_id=b.avail_id) }}" class="d-inline m-0">
-                <input type="hidden" name="status" value="not_needed">
-                <input type="hidden" name="week_start" value="{{ week_start }}">
-                <input type="hidden" name="date_str" value="{{ ds }}">
-                <button type="submit" class="btn-brigada-action btn-brigada-dismiss" title="Nepotřebujeme">✕</button>
-            </form>
-            {% elif b.status == 'confirmed' %}
-            <form method="POST" action="{{ url_for('employees.set_availability_status', avail_id=b.avail_id) }}" class="d-inline m-0">
-                <input type="hidden" name="status" value="available">
-                <input type="hidden" name="week_start" value="{{ week_start }}">
-                <input type="hidden" name="date_str" value="{{ ds }}">
-                <button type="submit" class="btn-brigada-action btn-brigada-dismiss" title="Zrušit potvrzení">↩</button>
-            </form>
-            {% endif %}
-            {% endif %}
-        </div>
-        {% endfor %}
-    </div>
-    {% endif %}
-
     {# ── Absence ── #}
     {% set full_absent = day_absent | selectattr('half_day', 'false') | list %}
     {% set half_absent = day_absent | selectattr('half_day') | list %}

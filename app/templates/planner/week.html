@@ -405,6 +405,44 @@
                     </td>
                 </tr>
                 {% endif %}
+
+                {% if brigada_grid %}
+                <tr>
+                    <td colspan="8" class="p-0">
+                        <div style="border-top:2px dashed var(--fm-border);margin:0;padding:0.25rem 0.5rem;background:var(--fm-bg-hover);font-size:0.72rem;color:var(--fm-text-muted);letter-spacing:.05em;text-transform:uppercase;">
+                            <i class="bi bi-person-badge"></i> Brigádníci
+                        </div>
+                    </td>
+                </tr>
+                {% for row in brigada_grid %}
+                {% set row_idx = 'b' ~ loop.index0 %}
+                <tr data-row="{{ row_idx }}" style="background:rgba(99,102,241,0.03)">
+                    <td class="emp-name" style="color:var(--fm-text-muted)">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <a href="{{ url_for('employees.detail', emp_id=row.employee.id) }}"
+                               class="text-decoration-none" title="Detail brigádníka" style="color:inherit">
+                                {{ row.employee.name }}
+                                <span class="badge bg-light text-secondary border ms-1" style="font-size:.6rem">B</span>
+                            </a>
+                        </div>
+                    </td>
+                    {% for day in row.days %}
+                    <td class="p-0 {{ 'col-weekend' if day.is_weekend }}" data-row="{{ row_idx }}" data-col="{{ loop.index0 }}">
+                        <div class="plan-cell-wrapper"
+                             id="cell-{{ row.employee.id }}-{{ day.date_str }}">
+                            <span class="cell-spinner"><i class="bi bi-arrow-repeat spin"></i></span>
+                            {% set a = day.assignment %}
+                            {% with plan_id=plan.id, emp_id=row.employee.id, cell_date=day.date_str,
+                                    holiday_name=holiday_map.get(day.date_str, ''),
+                                    vacation_name=vacation_days_map.get(day.date_str, '') %}
+                                {% include 'planner/_cell_display.html' %}
+                            {% endwith %}
+                        </div>
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+                {% endif %}
             </tbody>
 
             <!-- Staffing Summary (auto-refreshes after cell edit via HTMX) -->

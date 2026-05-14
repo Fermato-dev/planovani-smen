@@ -17,7 +17,7 @@ def export_week(week_start):
     if not plan:
         abort(404)
 
-    grid, dates = build_plan_grid(plan['id'], week_start)
+    grid, _brigada_grid, dates = build_plan_grid(plan['id'], week_start)
     summary, task_summary = get_staffing_summary(plan['id'], dates)
 
     xlsx_bytes = generate_week_excel(plan, grid, dates, summary, task_summary)
@@ -46,7 +46,7 @@ def print_week(week_start):
 
     mode = request.args.get('mode', 'pdf')  # 'pdf' or 'board'
 
-    grid, dates = build_plan_grid(plan['id'], week_start)
+    grid, _brigada_grid, dates = build_plan_grid(plan['id'], week_start)
     summary, task_summary = get_staffing_summary(plan['id'], dates)
     req_map = get_requirements_map(plan['id'], dates)
     shifts = get_all_shifts()
