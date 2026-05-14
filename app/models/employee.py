@@ -27,11 +27,11 @@ def find_employee_by_name(name):
     return db.execute("SELECT * FROM employees WHERE name = ?", (name.strip(),)).fetchone()
 
 
-def create_employee(name, default_shift_id=None, note='', email=''):
+def create_employee(name, default_shift_id=None, note='', email='', emp_type='regular'):
     db = get_db()
     cursor = db.execute(
-        "INSERT INTO employees (name, default_shift_id, note, email) VALUES (?, ?, ?, ?)",
-        (name.strip(), default_shift_id, note, email.strip() if email else '')
+        "INSERT INTO employees (name, default_shift_id, note, email, emp_type) VALUES (?, ?, ?, ?, ?)",
+        (name.strip(), default_shift_id, note, email.strip() if email else '', emp_type)
     )
     db.commit()
     return cursor.lastrowid

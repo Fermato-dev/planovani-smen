@@ -34,7 +34,8 @@ def add():
             flash('Zadejte jméno zaměstnance.', 'error')
             return render_template('employees/form.html',
                                    shifts=shifts, departments=departments, tasks=tasks)
-        emp_id = create_employee(name, default_shift_id, note, email=email)
+        emp_type = request.form.get('emp_type', 'regular')
+        emp_id = create_employee(name, default_shift_id, note, email=email, emp_type=emp_type)
         # Save qualifications
         _save_qualifications(emp_id)
         flash(f'Zaměstnanec {name} přidán.', 'success')

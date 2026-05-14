@@ -64,7 +64,10 @@ def create_or_get_plan(week_start):
 
 def build_plan_grid(plan_id, week_start):
     """Build the planning grid data structure: employees × days with assignments."""
-    employees = get_all_employees(active_only=True)
+    all_emps = get_all_employees(active_only=True)
+    # Brigádníci se nezobrazují v plánu směn
+    employees = [e for e in all_emps
+                 if ('emp_type' not in e.keys() or e['emp_type'] != 'brigada')]
     assignments = get_assignments_for_plan(plan_id)
     dates = get_week_dates(week_start)
 
@@ -150,7 +153,10 @@ def _fill_patterns_and_constraints(plan_id, ws, dates):
     from app.utils.holidays import get_holidays_for_dates
     holiday_map = get_holidays_for_dates(dates)
 
-    employees = get_all_employees(active_only=True)
+    all_emps = get_all_employees(active_only=True)
+    # Brigádníci nemají pravidelný vzor – vyřadíme je z automatického plnění
+    employees = [e for e in all_emps
+                 if ('emp_type' not in e.keys() or e['emp_type'] != 'brigada')]
 
     # Pass 1: fill regular pattern days (skip holidays and non-work days)
     for emp in employees:
