@@ -198,33 +198,58 @@ tr.brigada-sep td {
 /* ===== PRINT STYLES ===== */
 @media print {
     .toolbar { display: none !important; }
-    body { padding: 0; font-size: 12px; }
-    @page { size: A4 landscape; margin: 8mm 8mm 8mm 8mm; }
+    body { padding: 0; }
 
-    /* Repeat header on every page – browser handles this via table-header-group */
+{% if print_mode == 'pdf' %}
+    /* ── EMAIL / PDF mód: A3 landscape, jeden týden = jedna strana ── */
+    @page { size: A3 landscape; margin: 6mm; }
+    body { font-size: 10px; }
     thead { display: table-header-group; }
-
-    /* Never break inside an employee row */
-    tbody.emp-body tr    { page-break-inside: avoid; break-inside: avoid; }
-
-    /* Summary always starts on a new line but never breaks internally */
-    .summary-section     { page-break-inside: avoid; break-inside: avoid; }
-
-    /* Legend never breaks */
-    .legend              { page-break-inside: avoid; break-inside: avoid; }
-
-    .doc-header { margin-bottom: 8px; padding-bottom: 6px; }
-    .doc-title  { font-size: 15px; }
-    .doc-sub    { font-size: 10px; }
+    tbody.emp-body tr   { page-break-inside: avoid; break-inside: avoid; }
+    .summary-section    { page-break-inside: avoid; break-inside: avoid; margin-top: 8px; }
+    .legend             { page-break-inside: avoid; break-inside: avoid; }
+    .doc-header         { margin-bottom: 5px; padding-bottom: 4px; }
+    .doc-title          { font-size: 13px; }
+    .doc-sub            { font-size: 9px; }
+    th:first-child, td:first-child { width: 130px; }
+    th, td              { padding: 3px 3px; }
+    .emp-name           { font-size: 10px; }
+    .cell-dept          { font-size: 9px; padding: 1px 4px; margin-bottom: 1px; }
+    .cell-task          { font-size: 8px; margin-top: 0; }
+    .cell-shift         { font-size: 8px; }
+    .cell-note          { font-size: 8px; }
+    .absence            { font-size: 9px; padding: 1px 5px; }
+    thead th            { font-size: 10px; padding: 4px 2px; }
+    .summary-section    { margin-top: 6px; }
+    .summary-title      { font-size: 9px; margin-bottom: 3px; }
+    .summary-table th, .summary-table td { font-size: 8px; padding: 2px 2px; }
+    .summary-table th:first-child, .summary-table td:first-child { width: 130px; }
+    .dept-badge         { font-size: 8px; padding: 1px 3px; }
+    .sum-count          { font-size: 10px; }
+    .task-line          { font-size: 8px; }
+    .legend             { font-size: 8px; margin-top: 5px; }
+    tr.brigada-sep td   { font-size: 8px; padding: 2px 5px; }
+{% else %}
+    /* ── TISK (nástěnka): A4 landscape, více stran, čitelné ── */
+    @page { size: A4 landscape; margin: 8mm; }
+    body { font-size: 12px; }
+    thead { display: table-header-group; }
+    tbody.emp-body tr   { page-break-inside: avoid; break-inside: avoid; }
+    .summary-section    { page-break-inside: avoid; break-inside: avoid; }
+    .legend             { page-break-inside: avoid; break-inside: avoid; }
+    .doc-header         { margin-bottom: 8px; padding-bottom: 6px; }
+    .doc-title          { font-size: 15px; }
+    .doc-sub            { font-size: 10px; }
     th:first-child, td:first-child { width: 140px; }
-    .emp-name   { font-size: 12px; }
-    .cell-dept  { font-size: 11px; padding: 1px 5px; }
-    .cell-task  { font-size: 10px; }
-    .cell-shift { font-size: 9px; }
-    .cell-note  { font-size: 9px; }
-    thead th    { font-size: 11px; padding: 5px 3px; }
+    .emp-name           { font-size: 12px; }
+    .cell-dept          { font-size: 11px; padding: 1px 5px; }
+    .cell-task          { font-size: 10px; }
+    .cell-shift         { font-size: 9px; }
+    .cell-note          { font-size: 9px; }
+    thead th            { font-size: 11px; padding: 5px 3px; }
     .summary-table th, .summary-table td { font-size: 10px; padding: 4px 3px; }
-    .summary-title { font-size: 11px; }
+    .summary-title      { font-size: 11px; }
+{% endif %}
 }
 </style>
 </head>
@@ -236,7 +261,14 @@ tr.brigada-sep td {
 } %}
 
 <div class="toolbar">
-    <button class="print-btn" onclick="window.print()">🖨 Tisk / Uložit PDF</button>
+    <button class="print-btn" onclick="window.print()">
+        🖨 {% if print_mode == 'pdf' %}Uložit jako PDF (A3 – pro email){% else %}Tisk (A4 – nástěnka){% endif %}
+    </button>
+    {% if print_mode == 'pdf' %}
+    <a class="print-btn btn-sec" href="?mode=board">↗ Přepnout na tisk A4</a>
+    {% else %}
+    <a class="print-btn btn-sec" href="?mode=pdf">↗ Přepnout na PDF A3 (pro email)</a>
+    {% endif %}
 </div>
 
 <div class="doc-header">
