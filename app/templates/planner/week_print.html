@@ -10,7 +10,7 @@
 
 body {
     font-family: 'Segoe UI', Arial, sans-serif;
-    font-size: {{ '10px' if is_pdf else '13px' }};
+    font-size: {{ '11px' if is_pdf else '13px' }};
     color: #1F2937;
     background: #fff;
     padding: {{ '10px' if is_pdf else '16px' }};
@@ -25,7 +25,7 @@ body {
     padding-bottom: {{ '4px' if is_pdf else '8px' }};
     border-bottom: 2px solid #1E40AF;
 }
-.doc-title { font-size: {{ '14px' if is_pdf else '18px' }}; font-weight: 700; color: #1E3A8A; }
+.doc-title { font-size: {{ '15px' if is_pdf else '18px' }}; font-weight: 700; color: #1E3A8A; }
 .doc-sub   { font-size: {{ '10px' if is_pdf else '12px' }}; color: #6B7280; margin-top: 1px; }
 .doc-meta  { font-size: {{ '9px' if is_pdf else '11px' }}; color: #9CA3AF; text-align: right; }
 
@@ -46,70 +46,81 @@ thead { display: table-header-group; }
 
 th, td {
     border: 1px solid #D1D5DB;
-    padding: {{ '2px 3px' if is_pdf else '5px 5px' }};
-    vertical-align: {{ 'middle' if is_pdf else 'top' }};
+    padding: {{ '2px 4px' if is_pdf else '5px 5px' }};
+    vertical-align: top;
 }
-th:first-child, td:first-child { width: {{ '130px' if is_pdf else '155px' }}; }
+
+{% if is_pdf %}
+/* A3 portrait – name col wider, 7 day cols fill rest */
+th:first-child, td:first-child { width: 75px; }
+{% else %}
+th:first-child, td:first-child { width: 155px; }
+{% endif %}
 
 thead th {
     background: #1E40AF; color: #fff;
-    font-size: {{ '9px' if is_pdf else '12px' }};
+    font-size: {{ '10px' if is_pdf else '12px' }};
     font-weight: 700; text-align: center; vertical-align: middle;
     padding: {{ '4px 2px' if is_pdf else '7px 4px' }};
 }
-thead th:first-child { background: #1E3A8A; }
+thead th:first-child { background: #1E3A8A; text-align: left; padding-left: 5px; }
 thead th.weekend    { background: #1D4ED8; }
 
 /* Alternating rows */
-tbody.emp-body tr:nth-child(odd) td:not(.weekend)  { background: #fff; }
+tbody.emp-body tr:nth-child(odd)  td:not(.weekend) { background: #fff; }
 tbody.emp-body tr:nth-child(even) td:not(.weekend) { background: #F8FAFC; }
 td.weekend { background: #EEF2FF !important; }
 td.nowork  { background: #F3F4F6 !important; opacity: .6; }
 
 .emp-name {
-    font-size: {{ '9px' if is_pdf else '13px' }};
+    font-size: {{ '10px' if is_pdf else '13px' }};
     font-weight: 700; color: #111827;
+    word-break: break-word;
 }
 .emp-badge {
-    display: inline-block; font-size: 8px; font-weight: 600;
+    display: inline-block; font-size: 7px; font-weight: 600;
     background: #E0E7FF; color: #3730A3;
-    border-radius: 3px; padding: 0 3px; margin-left: 2px; vertical-align: middle;
+    border-radius: 3px; padding: 0 2px; margin-left: 2px; vertical-align: middle;
 }
 
-{% if is_pdf %}
-/* ── PDF: compact single-line cells ── */
-.cell-inline {
-    display: inline-flex; align-items: center; gap: 3px;
-    white-space: nowrap; overflow: hidden; max-width: 100%;
-}
+/* ── Cell content ── */
 .cell-dept {
-    display: inline-block; border-radius: 3px;
-    padding: 0 4px; font-size: 8px; font-weight: 700;
-    color: #1F2937; flex-shrink: 0;
+    display: inline-block; border-radius: {{ '2px' if is_pdf else '4px' }};
+    padding: {{ '0 3px' if is_pdf else '1px 5px' }};
+    font-size: {{ '9px' if is_pdf else '12px' }};
+    font-weight: 700; color: #1F2937;
+    {% if not is_pdf %}margin-bottom: 2px;{% endif %}
 }
-.cell-task  { font-size: 8px; color: #374151; overflow: hidden; text-overflow: ellipsis; }
-.cell-shift { font-size: 8px; color: #6B7280; flex-shrink: 0; }
-.cell-note  { font-size: 7px; color: #9CA3AF; font-style: italic; }
-.absence {
-    display: inline-block; border-radius: 3px;
-    padding: 0 4px; font-size: 8px; font-weight: 700;
+.cell-task {
+    display: block;
+    font-size: {{ '10px' if is_pdf else '11px' }};
+    color: #374151;
+    {% if is_pdf %}
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    {% else %}
+    margin-top: 1px;
+    {% endif %}
 }
-{% else %}
-/* ── Print (A4): stacked cells ── */
-.cell-dept {
-    display: inline-block; border-radius: 4px;
-    padding: 2px 6px; font-size: 12px; font-weight: 700;
-    color: #1F2937; margin-bottom: 2px;
+.cell-shift {
+    display: block;
+    font-size: {{ '9px' if is_pdf else '10px' }};
+    color: #6B7280;
+    margin-top: {{ '0' if is_pdf else '1px' }};
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.cell-task  { display: block; font-size: 11px; color: #374151; margin-top: 1px; }
-.cell-shift { display: block; font-size: 10px; color: #6B7280; margin-top: 1px; }
-.cell-note  { display: block; font-size: 10px; color: #9CA3AF; font-style: italic; }
-.absence {
-    display: inline-block; border-radius: 4px;
-    padding: 2px 7px; font-size: 11px; font-weight: 700;
+.cell-note {
+    display: block;
+    font-size: {{ '8px' if is_pdf else '10px' }};
+    color: #9CA3AF; font-style: italic;
+    {% if is_pdf %}white-space: nowrap; overflow: hidden; text-overflow: ellipsis;{% endif %}
 }
-{% endif %}
 
+.absence {
+    display: inline-block; border-radius: {{ '2px' if is_pdf else '4px' }};
+    padding: {{ '0 3px' if is_pdf else '2px 7px' }};
+    font-size: {{ '10px' if is_pdf else '11px' }};
+    font-weight: 700;
+}
 .abs-dovolena { background: #FEF3C7; color: #92400E; }
 .abs-nemoc    { background: #FECACA; color: #991B1B; }
 .abs-lekar    { background: #DBEAFE; color: #1E40AF; }
@@ -123,36 +134,35 @@ tr.brigada-sep td {
     background: #F0F4FF !important;
     border-top: {{ '1px' if is_pdf else '2px' }} dashed #93C5FD;
     padding: {{ '2px 5px' if is_pdf else '3px 8px' }};
-    font-size: {{ '8px' if is_pdf else '10px' }};
+    font-size: {{ '9px' if is_pdf else '10px' }};
     font-weight: 700; color: #3730A3;
     text-transform: uppercase; letter-spacing: .05em;
 }
 
-{% if is_pdf %}
 /* ── PDF Summary: compact strip ── */
+{% if is_pdf %}
 .summary-section {
-    margin-top: 6px;
+    margin-top: 8px;
     border-top: 1px solid #BFDBFE;
-    padding-top: 4px;
+    padding-top: 5px;
 }
 .summary-strip {
-    display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-start;
+    display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-start;
 }
-.summary-day {
-    min-width: 70px;
-}
+.summary-day { min-width: 80px; }
 .summary-day-label {
-    font-size: 8px; font-weight: 700; color: #1E3A8A;
+    font-size: 9px; font-weight: 700; color: #1E3A8A;
     text-transform: uppercase; margin-bottom: 2px;
+    border-bottom: 1px solid #BFDBFE; padding-bottom: 1px;
 }
 .summary-dept-line {
-    font-size: 8px; color: #374151;
-    white-space: nowrap;
+    font-size: 9px; color: #374151; white-space: nowrap; margin-top: 1px;
 }
 .dept-badge {
     display: inline-block; border-radius: 2px;
-    padding: 0 3px; font-size: 7px; font-weight: 700; color: #1F2937;
+    padding: 0 3px; font-size: 8px; font-weight: 700; color: #1F2937;
 }
+
 {% else %}
 /* ── A4 Summary: full table ── */
 .summary-section { margin-top: 18px; page-break-inside: avoid; break-inside: avoid; }
@@ -188,7 +198,7 @@ tr.brigada-sep td {
 /* ── Legend ── */
 .legend {
     margin-top: {{ '5px' if is_pdf else '10px' }};
-    font-size: {{ '8px' if is_pdf else '10px' }};
+    font-size: {{ '9px' if is_pdf else '10px' }};
     color: #6B7280; border-top: 1px solid #E5E7EB;
     padding-top: {{ '3px' if is_pdf else '6px' }};
 }
@@ -199,8 +209,8 @@ tr.brigada-sep td {
     body { padding: 0; }
 
 {% if is_pdf %}
-    @page { size: A3 landscape; margin: 5mm; }
-    body  { font-size: 9px; }
+    @page { size: A3 portrait; margin: 5mm; }
+    body  { font-size: 11px; }
     thead { display: table-header-group; }
     tbody.emp-body tr             { page-break-inside: avoid; break-inside: avoid; }
     tbody.emp-body tr.brigada-sep { page-break-after: avoid; break-after: avoid; }
@@ -249,21 +259,13 @@ tr.brigada-sep td {
 {% macro render_cell(a, is_pdf) %}
 {% if a %}
     {% if a.is_absence %}
-        <span class="absence abs-{{ a.absence_type or 'jine' }}">{{ absence_labels.get(a.absence_type, '') }}</span>
-        {% if not is_pdf and a.note %}<span class="cell-note">{{ a.note }}</span>{% endif %}
+        <span class="absence abs-{{ a.absence_type or 'jine' }}">{{ absence_labels.get(a.absence_type, 'Jiné') }}</span>
+        {% if a.note %}<span class="cell-note">{{ a.note }}</span>{% endif %}
     {% else %}
-        {% if is_pdf %}
-        <span class="cell-inline">
-            {% if a.dept_name %}<span class="cell-dept" style="background:#{{ a.dept_color or 'D9D9D9' }}">{{ a.dept_name }}</span>{% endif %}
-            {% if a.task_name %}<span class="cell-task">{{ a.task_name }}</span>{% endif %}
-            {% if a.shift_name %}<span class="cell-shift">{{ a.shift_name[:5] if a.shift_name else '' }}</span>{% endif %}
-        </span>
-        {% else %}
         {% if a.dept_name %}<span class="cell-dept" style="background:#{{ a.dept_color or 'D9D9D9' }}">{{ a.dept_name }}</span>{% endif %}
         {% if a.task_name %}<span class="cell-task">{{ a.task_name }}</span>{% endif %}
         {% if a.shift_name %}<span class="cell-shift">{{ a.shift_name }}</span>{% endif %}
         {% if a.note %}<span class="cell-note">{{ a.note }}</span>{% endif %}
-        {% endif %}
     {% endif %}
 {% endif %}
 {% endmacro %}
