@@ -75,6 +75,30 @@ def delete_constraint(constraint_id):
     db.commit()
 
 
+def get_constraints_for_month(year, month):
+    """Get all constraints overlapping the given month, with employee info."""
+    import calendar as _cal
+    from datetime import date as _date
+    first_day = _date(year, month, 1)
+    last_day  = _date(year, month, _cal.monthrange(year, month)[1])
+    db = get_db()
+    # Check whether half_day column exists
+    cols = [r[1] for r in db.execute("PRAGMA table_info(constraints)").fetchall()]
+    hd = "c.half_day" if "half_day" in cols else "0 as half_day"
+    return db.execute(
+        f"""SELECT c.id, c.employee_id, c.date_from, c.date_to,
+                   c.type, c.note, {hd},
+                   e.name as employee_name,
+                   COALESCE(e.emp_type, 'regular') as emp_type
+             FROM constraints c
+             JOIN employees e ON c.employee_id = e.id
+            WHERE c.date_from <= ? AND c.date_to >= ?
+              AND e.active = 1
+            ORDER BY e.name, c.date_from""",
+        (last_day.isoformat(), first_day.isoformat())
+    ).fetchall()
+
+
 def get_constraints_for_week(week_start, week_end):
     """Get constraints that overlap with the given week range.
 
