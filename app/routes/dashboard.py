@@ -7,6 +7,7 @@ from app.models.employee import get_all_employees
 from app.models.department import get_all_departments
 from app.models.shift import get_all_shifts
 from app.models.constraint import get_constraints_for_month, _parse_date
+from app.utils.holidays import get_czech_holidays
 
 bp = Blueprint('dashboard', __name__)
 
@@ -64,6 +65,12 @@ def _build_calendar_ctx(year, month):
         for d in days
     }
 
+    # Czech public holidays for the displayed month
+    raw_holidays = get_czech_holidays(year)
+    # include adjacent years if month spans year boundary (not needed here, but safe)
+    holidays = {d.isoformat(): name for d, name in raw_holidays.items()
+                if d.month == month and d.year == year}
+
     # Navigation
     prev_year,  prev_month  = (year - 1, 12) if month == 1  else (year, month - 1)
     next_year,  next_month  = (year + 1,  1) if month == 12 else (year, month + 1)
@@ -77,6 +84,7 @@ def _build_calendar_ctx(year, month):
         brigada_emps=brigada_emps,
         cal=cal,
         day_counts=day_counts,
+        holidays=holidays,
         prev_year=prev_year,  prev_month=prev_month,
         next_year=next_year,  next_month=next_month,
     )
