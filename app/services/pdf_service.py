@@ -43,6 +43,15 @@ _TRANS = str.maketrans({
     'Á': 'A', 'Č': 'C', 'Ď': 'D', 'É': 'E', 'Ě': 'E', 'Í': 'I',
     'Ľ': 'L', 'Ň': 'N', 'Ó': 'O', 'Ř': 'R', 'Š': 'S', 'Ť': 'T',
     'Ú': 'U', 'Ů': 'U', 'Ý': 'Y', 'Ž': 'Z',
+    '–': '-',   # en dash –
+    '—': '-',   # em dash —
+    '‘': "'",   # left single quote '
+    '’': "'",   # right single quote '
+    '“': '"',   # left double quote "
+    '”': '"',   # right double quote "
+    '…': '...', # ellipsis …
+    '·': '.',   # middle dot ·
+    '×': 'x',   # multiplication sign ×
 })
 
 
