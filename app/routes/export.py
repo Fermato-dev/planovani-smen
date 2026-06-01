@@ -37,26 +37,18 @@ def export_week(week_start):
 
 @bp.route('/week/<week_start>/pdf-download')
 def download_pdf(week_start):
-    """Server-side WeasyPrint PDF – guarantees one page, no browser dialog."""
+    """Server-side PDF (fpdf2) – guaranteed one page, no browser dialog."""
     plan = get_plan_by_week(week_start)
     if not plan:
         abort(404)
 
     grid, brigada_grid, dates = build_plan_grid(plan['id'], week_start)
-    summary, task_summary = get_staffing_summary(plan['id'], dates)
-    req_map = get_requirements_map(plan['id'], dates)
-    shifts = get_all_shifts()
 
-    html = render_template('planner/week_print.html',
-                           plan=plan, grid=grid, brigada_grid=brigada_grid,
-                           dates=dates, summary=summary, task_summary=task_summary,
-                           req_map=req_map, shifts=shifts, day_names=DAY_NAMES,
-                           print_mode='pdf')
     try:
-        from weasyprint import HTML
-        pdf_bytes = HTML(string=html).write_pdf()
+        from app.services.pdf_service import generate_week_pdf
+        pdf_bytes = generate_week_pdf(plan, grid, brigada_grid, dates, DAY_NAMES)
     except Exception as e:
-        logger.error(f"WeasyPrint failed: {e}", exc_info=True)
+        logger.error(f"PDF generation failed: {e}", exc_info=True)
         abort(500, description=f"Generování PDF selhalo: {e}")
 
     fn = f"Plan_smen_T{plan['week_number']}_{dates[0].strftime('%d%m')}-{dates[6].strftime('%d%m%Y')}.pdf"
@@ -79,7 +71,7 @@ def print_week(week_start):
 
     mode = request.args.get('mode', 'pdf')  # 'pdf' or 'board'
 
-    # PDF mode → server-side WeasyPrint guarantees single page, no browser dialog confusion
+    # PDF mode → server-side fpdf2 guarantees single page, no browser dialog confusion
     if mode == 'pdf':
         return redirect(url_for('export.download_pdf', week_start=week_start))
 
