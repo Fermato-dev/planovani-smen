@@ -69,6 +69,36 @@ def _is_dark(r, g, b):
     return (r * 299 + g * 587 + b * 114) < 128_000
 
 
+# Palette of distinct, visually pleasing colours for auto-assignment
+_PALETTE = [
+    (37,  99, 235),  # blue
+    (5,  150, 105),  # emerald
+    (217, 70, 239),  # fuchsia
+    (234, 88,  12),  # orange
+    (220, 38,  38),  # red
+    (2,  132, 199),  # sky
+    (101,163,  13),  # lime
+    (168, 85, 247),  # violet
+    (15, 118, 110),  # teal
+    (180, 83,   9),  # amber-dark
+]
+
+
+def _dept_color(dept_name, dept_color_hex):
+    """Return (r, g, b) for a dept badge.
+
+    Uses the stored hex if it's not the default grey,
+    otherwise picks a consistent colour from the palette.
+    """
+    if dept_color_hex:
+        h = dept_color_hex.lstrip('#').upper()
+        if h not in ('D9D9D9', 'FFFFFF', ''):
+            return _hex_rgb(dept_color_hex)
+    # Auto-assign from palette based on dept name hash
+    idx = sum(ord(c) for c in (dept_name or '')) % len(_PALETTE)
+    return _PALETTE[idx]
+
+
 def generate_week_pdf(plan, grid, brigada_grid, dates, day_names):
     """Return PDF bytes – A3 landscape, one page, coloured dept badges."""
     try:
@@ -203,8 +233,7 @@ def generate_week_pdf(plan, grid, brigada_grid, dates, day_names):
                 dept       = _t(a.get('dept_name') or '')
                 task       = _t(a.get('task_name') or '')
                 shift      = _t(a.get('shift_name') or '')
-                dept_hex   = a.get('dept_color') or 'D9D9D9'
-                dr, dg, db = _hex_rgb(dept_hex)
+                dr, dg, db = _dept_color(dept, a.get('dept_color') or '')
 
                 # Cell background
                 pdf.set_fill_color(*base_bg)
