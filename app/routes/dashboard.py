@@ -1,4 +1,5 @@
 import calendar as _cal
+import colorsys
 from datetime import date, timedelta
 
 from flask import Blueprint, render_template, request
@@ -113,30 +114,28 @@ def _build_today_staffing(today):
         tasks_by_dept.setdefault(t['department_id'], []).append(dict(t))
 
     def _css_color(raw):
-        """Ensure color has # prefix for CSS. Falls back to gray."""
+        """Ensure color has # prefix for CSS. Falls back to teal."""
         if not raw or raw.strip('#').upper() in ('D9D9D9', 'FFFFFF', ''):
-            return '#6b7280'
+            return '#0d9488'
         return raw if raw.startswith('#') else '#' + raw
 
-    def _vivid(hex_color):
-        """Darken a light/pastel color so it works as a vivid header background."""
+    def _parse_rgb(hex_color):
         h = hex_color.lstrip('#')
-        r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
-        # Blend toward a dark version: keep hue but reduce brightness strongly
-        f = 0.52
-        return '#{:02x}{:02x}{:02x}'.format(int(r * f), int(g * f), int(b * f))
+        return int(h[0:2], 16) / 255.0, int(h[2:4], 16) / 255.0, int(h[4:6], 16) / 255.0
+
+    def _vivid(hex_color):
+        """Set lightness to 32% and boost saturation — preserves hue, removes muddiness."""
+        r, g, b = _parse_rgb(hex_color)
+        h, l, s = colorsys.rgb_to_hls(r, g, b)
+        r2, g2, b2 = colorsys.hls_to_rgb(h, 0.32, max(s, 0.55))
+        return '#{:02x}{:02x}{:02x}'.format(int(r2 * 255), int(g2 * 255), int(b2 * 255))
 
     def _light_tint(hex_color):
-        """Very light tint of the color for card body background."""
-        h = hex_color.lstrip('#')
-        r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
-        # Mix 92% white + 8% color
-        mix = 0.10
-        return '#{:02x}{:02x}{:02x}'.format(
-            int(255 - (255 - r) * mix),
-            int(255 - (255 - g) * mix),
-            int(255 - (255 - b) * mix),
-        )
+        """Same hue, lightness 96% — barely-there background tint."""
+        r, g, b = _parse_rgb(hex_color)
+        h, l, s = colorsys.rgb_to_hls(r, g, b)
+        r2, g2, b2 = colorsys.hls_to_rgb(h, 0.96, max(s, 0.30))
+        return '#{:02x}{:02x}{:02x}'.format(int(r2 * 255), int(g2 * 255), int(b2 * 255))
 
     result = []
     for d in dept_rows:
