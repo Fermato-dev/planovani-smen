@@ -5,5 +5,11 @@ aptPkgs = [
   "libcairo2",
   "libgdk-pixbuf2.0-0",
   "libffi-dev",
-  "shared-mime-info"
+  "shared-mime-info",
+  "libglib2.0-0",
+  "libxml2",
+  "libxslt1.1",
+  "fonts-liberation",
+  "libjpeg62-turbo",
+  "zlib1g"
 ]
