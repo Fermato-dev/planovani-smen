@@ -112,12 +112,18 @@ def _build_today_staffing(today):
     for t in task_rows:
         tasks_by_dept.setdefault(t['department_id'], []).append(dict(t))
 
+    def _css_color(raw):
+        """Ensure color has # prefix for CSS. Falls back to gray."""
+        if not raw or raw.upper() in ('D9D9D9', 'FFFFFF', ''):
+            return '#6b7280'
+        return raw if raw.startswith('#') else '#' + raw
+
     result = []
     for d in dept_rows:
         result.append({
             'id':          d['id'],
             'name':        d['name'],
-            'color':       d['color'] or '#6b7280',
+            'color':       _css_color(d['color']),
             'staff_count': d['staff_count'],
             'min_staff':   d['min_staff'],
             'max_staff':   d['max_staff'],
