@@ -113,39 +113,59 @@ def _build_today_staffing(today):
     for t in task_rows:
         tasks_by_dept.setdefault(t['department_id'], []).append(dict(t))
 
+    # Curated UI palette: (hue_degrees, header_hex, body_tint_hex)
+    # Covers the full hue wheel with colors that fit the app's design language
+    _UI_PALETTE = [
+        (  0, '#be123c', '#fff1f2'),   # rose / red
+        ( 22, '#c2410c', '#fff7ed'),   # orange
+        ( 45, '#a16207', '#fefce8'),   # yellow → dark amber (not muddy brown)
+        ( 90, '#15803d', '#f0fdf4'),   # green
+        (150, '#0f766e', '#f0fdfa'),   # teal  ← matches app primary
+        (200, '#0369a1', '#f0f9ff'),   # sky blue
+        (230, '#1d4ed8', '#eff6ff'),   # blue
+        (260, '#6d28d9', '#f5f3ff'),   # violet
+        (290, '#7e22ce', '#faf5ff'),   # purple
+        (320, '#be185d', '#fdf2f8'),   # pink
+    ]
+
     def _css_color(raw):
         """Ensure color has # prefix for CSS. Falls back to teal."""
         if not raw or raw.strip('#').upper() in ('D9D9D9', 'FFFFFF', ''):
-            return '#0d9488'
+            return '#0f766e'
         return raw if raw.startswith('#') else '#' + raw
 
-    def _parse_rgb(hex_color):
+    def _palette_for(hex_color):
+        """Map a DB color to the nearest UI-palette entry by hue distance."""
         h = hex_color.lstrip('#')
-        return int(h[0:2], 16) / 255.0, int(h[2:4], 16) / 255.0, int(h[4:6], 16) / 255.0
+        r, g, b = int(h[0:2], 16) / 255.0, int(h[2:4], 16) / 255.0, int(h[4:6], 16) / 255.0
+        hue_deg, lightness, sat = colorsys.rgb_to_hls(r, g, b)
+        hue_deg = hue_deg * 360  # colorsys gives 0-1
 
-    def _vivid(hex_color):
-        """Set lightness to 32% and boost saturation — preserves hue, removes muddiness."""
-        r, g, b = _parse_rgb(hex_color)
-        h, l, s = colorsys.rgb_to_hls(r, g, b)
-        r2, g2, b2 = colorsys.hls_to_rgb(h, 0.32, max(s, 0.55))
-        return '#{:02x}{:02x}{:02x}'.format(int(r2 * 255), int(g2 * 255), int(b2 * 255))
+        # If already very dark and saturated (admin picked a proper color) — use it directly
+        if lightness < 0.45 and sat > 0.40:
+            # Still compute body tint from this hue
+            r2, g2, b2 = colorsys.hls_to_rgb(hue_deg / 360, 0.96, max(sat, 0.30))
+            body = '#{:02x}{:02x}{:02x}'.format(int(r2 * 255), int(g2 * 255), int(b2 * 255))
+            return hex_color, body
 
-    def _light_tint(hex_color):
-        """Same hue, lightness 96% — barely-there background tint."""
-        r, g, b = _parse_rgb(hex_color)
-        h, l, s = colorsys.rgb_to_hls(r, g, b)
-        r2, g2, b2 = colorsys.hls_to_rgb(h, 0.96, max(s, 0.30))
-        return '#{:02x}{:02x}{:02x}'.format(int(r2 * 255), int(g2 * 255), int(b2 * 255))
+        # Find nearest palette entry by hue distance (circular)
+        def hue_dist(a, b):
+            d = abs(a - b) % 360
+            return d if d <= 180 else 360 - d
+
+        best = min(_UI_PALETTE, key=lambda p: hue_dist(hue_deg, p[0]))
+        return best[1], best[2]
 
     result = []
     for d in dept_rows:
         base = _css_color(d['color'])
+        header_color, body_color = _palette_for(base)
         result.append({
             'id':           d['id'],
             'name':         d['name'],
-            'color':        base,
-            'color_header': _vivid(base),
-            'color_body':   _light_tint(base),
+            'color':        header_color,
+            'color_header': header_color,
+            'color_body':   body_color,
             'staff_count':  d['staff_count'],
             'min_staff':    d['min_staff'],
             'max_staff':    d['max_staff'],
