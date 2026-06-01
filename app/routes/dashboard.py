@@ -113,34 +113,43 @@ def _build_today_staffing(today):
     for t in task_rows:
         tasks_by_dept.setdefault(t['department_id'], []).append(dict(t))
 
-    def _css_color(raw):
-        """Ensure color has # prefix for CSS. Falls back to teal."""
-        if not raw or raw.strip('#').upper() in ('D9D9D9', 'FFFFFF', ''):
-            return '#0f766e'
-        return raw if raw.startswith('#') else '#' + raw
+    # Colours taken directly from the absence calendar CSS variables
+    # --c-dovolena / lekar / osobni / nemoc / nahradni / svatek / jine
+    _DEPT_PALETTE = [
+        '#6ee7b7',   # emerald  (osobní)
+        '#ddd6fe',   # violet   (lékař)
+        '#fde68a',   # amber    (dovolená)
+        '#fca5a5',   # red-pink (nemoc)
+        '#f9a8d4',   # pink     (náhradní)
+        '#fed7aa',   # orange   (svátek)
+        '#cbd5e1',   # slate    (jiné)
+    ]
 
     def _text_color(hex_color):
-        """White or dark text depending on background luminance."""
+        """Dark text for all pastels (luminance-based)."""
         h = hex_color.lstrip('#')
         r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
         lum = 0.299 * r + 0.587 * g + 0.114 * b
-        return '#ffffff' if lum < 160 else '#1f2937'
+        return '#ffffff' if lum < 140 else '#1f2937'
 
-    def _tint(hex_color, opacity=0.12):
-        """Return rgba tint string for card body."""
+    def _tint(hex_color):
+        """Lighter tint for card body (mix 30% color + 70% white)."""
         h = hex_color.lstrip('#')
         r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
-        return f'rgba({r},{g},{b},{opacity})'
+        tr = int(r + (255 - r) * 0.45)
+        tg = int(g + (255 - g) * 0.45)
+        tb = int(b + (255 - b) * 0.45)
+        return f'#{tr:02x}{tg:02x}{tb:02x}'
 
     result = []
-    for d in dept_rows:
-        base = _css_color(d['color'])
+    for i, d in enumerate(dept_rows):
+        c = _DEPT_PALETTE[i % len(_DEPT_PALETTE)]
         result.append({
             'id':           d['id'],
             'name':         d['name'],
-            'color':        base,
-            'text_color':   _text_color(base),
-            'tint':         _tint(base, 0.10),
+            'color':        c,
+            'text_color':   _text_color(c),
+            'tint':         _tint(c),
             'staff_count':  d['staff_count'],
             'min_staff':    d['min_staff'],
             'max_staff':    d['max_staff'],
