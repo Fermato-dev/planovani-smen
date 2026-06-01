@@ -114,21 +114,47 @@ def _build_today_staffing(today):
 
     def _css_color(raw):
         """Ensure color has # prefix for CSS. Falls back to gray."""
-        if not raw or raw.upper() in ('D9D9D9', 'FFFFFF', ''):
+        if not raw or raw.strip('#').upper() in ('D9D9D9', 'FFFFFF', ''):
             return '#6b7280'
         return raw if raw.startswith('#') else '#' + raw
 
+    def _vivid(hex_color):
+        """Darken a light/pastel color so it works as a vivid header background."""
+        h = hex_color.lstrip('#')
+        r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+        # Blend toward a dark version: keep hue but reduce brightness strongly
+        f = 0.52
+        return '#{:02x}{:02x}{:02x}'.format(int(r * f), int(g * f), int(b * f))
+
+    def _light_tint(hex_color):
+        """Very light tint of the color for card body background."""
+        h = hex_color.lstrip('#')
+        r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+        # Mix 92% white + 8% color
+        mix = 0.10
+        return '#{:02x}{:02x}{:02x}'.format(
+            int(255 - (255 - r) * mix),
+            int(255 - (255 - g) * mix),
+            int(255 - (255 - b) * mix),
+        )
+
     result = []
     for d in dept_rows:
+        base = _css_color(d['color'])
         result.append({
-            'id':          d['id'],
-            'name':        d['name'],
-            'color':       _css_color(d['color']),
-            'staff_count': d['staff_count'],
-            'min_staff':   d['min_staff'],
-            'max_staff':   d['max_staff'],
-            'tasks':       tasks_by_dept.get(d['id'], []),
+            'id':           d['id'],
+            'name':         d['name'],
+            'color':        base,
+            'color_header': _vivid(base),
+            'color_body':   _light_tint(base),
+            'staff_count':  d['staff_count'],
+            'min_staff':    d['min_staff'],
+            'max_staff':    d['max_staff'],
+            'tasks':        tasks_by_dept.get(d['id'], []),
         })
+
+    # Sort: highest staff_count first (VÝR > EXP > SKL), then by name
+    result.sort(key=lambda x: (-x['staff_count'], x['name']))
     return result or None
 
 
