@@ -10,18 +10,19 @@
 </div>
 
 {# ── Dnešní obsazení ── #}
-<div class="card mb-4">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <div class="d-flex align-items-center gap-3">
-            <span><i class="bi bi-person-check me-1"></i> <strong>Dnes v práci</strong>
-                <span class="text-muted ms-1" style="font-size:.9em;">{{ now.strftime('%d.%m.%Y') }}</span>
-            </span>
+<div class="mb-4">
+    {# Top bar: date + total #}
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-person-check" style="font-size:1.1rem; color:var(--fm-primary);"></i>
+            <span style="font-weight:600; font-size:1rem;">Dnes v práci</span>
+            <span class="text-muted" style="font-size:.88rem;">{{ now.strftime('%d.%m.%Y') }}</span>
             {% if today_staffing %}
                 {% set total = today_staffing | sum(attribute='staff_count') %}
-                <span style="font-size:1.5rem; font-weight:800; color: var(--fm-primary); line-height:1;">
-                    {{ total }}
+                <span style="background:var(--fm-primary); color:#fff; font-weight:800; font-size:.85rem;
+                             padding:.15em .65em; border-radius:20px; letter-spacing:.02em;">
+                    {{ total }} lidí celkem
                 </span>
-                <span class="text-muted" style="font-size:.85rem;">lidí celkem</span>
             {% endif %}
         </div>
         <a href="{{ url_for('planner.index') }}" class="btn btn-outline-secondary btn-sm">
@@ -29,48 +30,58 @@
         </a>
     </div>
 
-    <div class="card-body p-0">
     {% if today_staffing %}
-        <div class="d-flex flex-wrap" style="border-top: 1px solid var(--fm-border);">
-        {% for dept in today_staffing %}
-            {% set c = dept['color'] or '#6b7280' %}
-            <div style="flex:1 1 180px; min-width:160px; border-right:1px solid var(--fm-border); padding:0.75rem 1rem 0.85rem;">
+    <div class="d-flex flex-wrap gap-3">
+    {% for dept in today_staffing %}
+        {% set c = dept['color'] or '#6b7280' %}
+        {# Slightly lightened header bg for readability #}
+        <div style="flex:1 1 190px; min-width:170px; border-radius:10px; overflow:hidden;
+                    box-shadow:0 2px 8px rgba(0,0,0,.10); border:1.5px solid {{ c }};">
 
-                {# Dept header row #}
-                <div class="d-flex align-items-center gap-2 mb-2">
-                    <span style="display:inline-block; width:12px; height:12px; border-radius:3px; background:{{ c }}; flex-shrink:0;"></span>
-                    <span style="font-weight:700; font-size:.9rem; color:{{ c }};">{{ dept['name'] }}</span>
-                    <span style="font-size:1.4rem; font-weight:800; color:{{ c }}; line-height:1; margin-left:auto;">{{ dept['staff_count'] }}</span>
-                </div>
+            {# Coloured header #}
+            <div style="background:{{ c }}; padding:.6rem 1rem .5rem; display:flex; align-items:center; justify-content:space-between;">
+                <span style="color:#fff; font-weight:800; font-size:1rem; letter-spacing:.03em;">{{ dept['name'] }}</span>
+                <span style="color:#fff; font-size:2rem; font-weight:900; line-height:1; opacity:.95;">{{ dept['staff_count'] }}</span>
+            </div>
 
-                {# Tasks #}
+            {# White task body #}
+            <div style="background:#fff; padding:.55rem .9rem .65rem;">
+            {% if dept['tasks'] %}
                 {% for task in dept['tasks'] %}
                     {% set max_s = task['max_staff'] %}
                     {% set show_max = max_s and max_s < 50 %}
                     {% set over = show_max and task['staff_count'] > max_s %}
                     {% set pct = ([[(task['staff_count'] / max_s * 100)|int, 100]|min, 0]|max) if show_max else 100 %}
-                    {% set tc = '#ef4444' if over else c %}
-                <div class="d-flex align-items-center gap-2" style="padding:.15rem 0; border-bottom:1px solid #f3f4f6;">
-                    <span class="text-truncate" style="font-size:.8rem; color:#374151; max-width:100px;" title="{{ task['name'] }}">{{ task['name'] }}</span>
-                    <div style="flex:1; height:4px; background:#e5e7eb; border-radius:2px; overflow:hidden; min-width:24px;">
-                        <div style="width:{{ pct }}%; height:100%; background:{{ tc }}; border-radius:2px;"></div>
+                    {% set tc = '#dc2626' if over else c %}
+                <div style="display:flex; align-items:center; gap:.45rem; padding:.22rem 0;
+                            border-bottom:1px solid #f0f1f3;">
+                    <span style="font-size:.82rem; color:#374151; flex:1; white-space:nowrap;
+                                 overflow:hidden; text-overflow:ellipsis; max-width:105px;"
+                          title="{{ task['name'] }}">{{ task['name'] }}</span>
+                    <div style="flex:1; height:5px; background:#e9ecef; border-radius:3px; overflow:hidden; min-width:28px;">
+                        <div style="width:{{ pct }}%; height:100%; background:{{ tc }}; border-radius:3px;"></div>
                     </div>
-                    <span style="font-size:.85rem; font-weight:700; color:{{ tc }}; white-space:nowrap;">
-                        {{ task['staff_count'] }}{% if show_max %}<span style="font-weight:400; color:#9ca3af; font-size:.75rem;"> / {{ max_s }}</span>{% endif %}
+                    <span style="font-size:.9rem; font-weight:700; color:{{ tc }}; white-space:nowrap; min-width:1.5rem; text-align:right;">
+                        {{ task['staff_count'] }}{% if show_max %}<span style="font-weight:400; color:#9ca3af; font-size:.75rem;"> /{{ max_s }}</span>{% endif %}
                     </span>
                 </div>
                 {% endfor %}
+            {% else %}
+                <span style="font-size:.8rem; color:#9ca3af;">žádné úkoly</span>
+            {% endif %}
             </div>
-        {% endfor %}
         </div>
+    {% endfor %}
+    </div>
     {% else %}
-        <div class="p-3 text-muted small">
+    <div class="card">
+        <div class="card-body text-muted small py-3">
             <i class="bi bi-calendar-x me-1"></i>
             Pro tento týden zatím není vytvořený plán.
             <a href="{{ url_for('planner.index') }}" class="ms-2">Vytvořit plán</a>
         </div>
-    {% endif %}
     </div>
+    {% endif %}
 </div>
 
 {# ── Měsíční přehled absencí ── #}

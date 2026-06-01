@@ -118,15 +118,19 @@
                                                     <label class="form-label">Plný název</label>
                                                     <input type="text" name="full_name" class="form-control" value="{{ dept.full_name or '' }}">
                                                 </div>
-                                                <div class="col-4">
+                                                <div class="col-3">
                                                     <label class="form-label">Barva</label>
                                                     <input type="color" name="color" class="form-control form-control-color" value="#{{ dept.color }}">
                                                 </div>
-                                                <div class="col-4 d-none">
+                                                <div class="col-3">
+                                                    <label class="form-label" title="Pořadí v přehledech — nižší číslo = dříve">Pořadí</label>
+                                                    <input type="number" name="sort_order" class="form-control" value="{{ dept.sort_order or 0 }}" min="0" max="999">
+                                                </div>
+                                                <div class="col-3 d-none">
                                                     <label class="form-label">Min lidí</label>
                                                     <input type="number" name="min_staff" class="form-control" value="{{ dept.min_staff }}" min="0">
                                                 </div>
-                                                <div class="col-4 d-none">
+                                                <div class="col-3 d-none">
                                                     <label class="form-label">Max lidí</label>
                                                     <input type="number" name="max_staff" class="form-control" value="{{ dept.max_staff }}" min="0">
                                                 </div>
