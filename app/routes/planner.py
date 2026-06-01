@@ -19,7 +19,8 @@ from app.models.shift import get_all_shifts
 from app.services.planner_service import (
     create_or_get_plan, build_plan_grid, get_staffing_summary,
     get_monday, get_week_dates, ABSENCE_TYPES,
-    copy_from_previous_week, refill_from_patterns
+    copy_from_previous_week, refill_from_patterns,
+    apply_constraints_to_plan
 )
 from app.services.export_service import generate_week_excel
 from app.services.email_service import send_personal_email, is_smtp_configured
@@ -336,6 +337,26 @@ def refill(plan_id):
         return redirect(url_for('planner.index'))
     refill_from_patterns(plan_id, plan['week_start'])
     flash('Plán přeplněn z výchozích vzorů a omezení.', 'success')
+    return redirect(url_for('planner.week_view', week_start=plan['week_start']))
+
+
+@bp.route('/apply-absences/<int:plan_id>', methods=['POST'])
+def apply_absences(plan_id):
+    """Apply absence constraints to existing plan without clearing other assignments."""
+    plan = get_plan(plan_id)
+    if not plan:
+        flash('Plán nenalezen.', 'error')
+        return redirect(url_for('planner.index'))
+    applied, n_emps = apply_constraints_to_plan(plan_id, plan['week_start'])
+    if applied:
+        flash(
+            f'Aplikováno {applied} absencí pro '
+            f'{n_emps} zaměstnanc{"e" if n_emps == 1 else "ů"}. '
+            f'Ostatní přiřazení zachována.',
+            'success'
+        )
+    else:
+        flash('Pro tento týden nejsou žádné absence k aplikování.', 'info')
     return redirect(url_for('planner.week_view', week_start=plan['week_start']))
 
 

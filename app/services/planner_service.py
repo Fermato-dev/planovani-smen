@@ -252,6 +252,84 @@ def _fill_patterns_and_constraints(plan_id, ws, dates):
     db.commit()
 
 
+def apply_constraints_to_plan(plan_id, week_start, employee_id=None):
+    """Apply absence constraints to an existing plan WITHOUT clearing other assignments.
+
+    Only overwrites cells where a constraint/absence exists.
+    If employee_id is given, applies only for that one employee.
+
+    Returns (applied_days, affected_employees_count).
+    """
+    if isinstance(week_start, str):
+        parts = week_start.split('-')
+        ws = date(int(parts[0]), int(parts[1]), int(parts[2]))
+    else:
+        ws = week_start
+
+    dates = get_week_dates(ws)
+    week_end = dates[6].isoformat()
+
+    constraints = get_constraints_for_week(ws.isoformat(), week_end)
+    if employee_id:
+        constraints = [c for c in constraints if c['employee_id'] == employee_id]
+
+    applied = 0
+    affected = set()
+
+    for c in constraints:
+        c_from   = _parse_date(c['date_from'])
+        c_to     = _parse_date(c['date_to'])
+        half_day = c['half_day'] if 'half_day' in c.keys() else 0
+        for d in dates:
+            if c_from <= d <= c_to:
+                if half_day:
+                    note_text = c['note'] or ''
+                    existing = get_db().execute(
+                        "SELECT id FROM assignments WHERE plan_id=? AND employee_id=? AND date=?",
+                        (plan_id, c['employee_id'], d.isoformat())
+                    ).fetchone()
+                    if existing:
+                        get_db().execute(
+                            "UPDATE assignments SET note=? WHERE id=?",
+                            (note_text, existing['id'])
+                        )
+                    else:
+                        upsert_assignment(
+                            plan_id=plan_id, employee_id=c['employee_id'],
+                            date=d.isoformat(), is_absence=1,
+                            absence_type=c['type'], note=note_text
+                        )
+                else:
+                    upsert_assignment(
+                        plan_id=plan_id, employee_id=c['employee_id'],
+                        date=d.isoformat(),
+                        shift_template_id=None, department_id=None, task_id=None,
+                        is_absence=1, absence_type=c['type'], note=c['note'] or ''
+                    )
+                applied += 1
+                affected.add(c['employee_id'])
+
+    get_db().commit()
+    return applied, len(affected)
+
+
+def get_overlapping_plans(date_from_str, date_to_str):
+    """Return list of (plan, week_start_date) for plans overlapping the date range."""
+    d_from = _parse_date(date_from_str)
+    d_to   = _parse_date(date_to_str)
+    # Monday of the week containing d_from
+    monday = d_from - timedelta(days=d_from.weekday())
+    last_monday = d_to - timedelta(days=d_to.weekday())
+    result = []
+    current = monday
+    while current <= last_monday:
+        plan = get_plan_by_week(current.isoformat())
+        if plan:
+            result.append((plan, current))
+        current += timedelta(weeks=1)
+    return result
+
+
 def copy_from_previous_week(target_plan_id, target_week_start):
     """Copy all assignments from previous week's plan into target plan."""
     if isinstance(target_week_start, str):

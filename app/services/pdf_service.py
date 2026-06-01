@@ -107,11 +107,11 @@ def generate_week_pdf(plan, grid, brigada_grid, dates, day_names):
 
     TWO_LINE = ROW_H >= 8.0       # show task + shift on separate lines
 
-    FS_TITLE = 10
-    FS_HDR   = 7
-    FS_NAME  = max(7.0, min(11.0, ROW_H * 1.35))
-    FS_TASK  = max(6.5, min(10.5, ROW_H * (1.2 if TWO_LINE else 1.3)))
-    FS_SHIFT = max(5.5, min( 9.0, ROW_H * 0.95))
+    FS_TITLE = 11
+    FS_HDR   = 8
+    FS_NAME  = max(8.5, min(13.0, ROW_H * 1.55))
+    FS_TASK  = max(8.0, min(12.5, ROW_H * (1.4 if TWO_LINE else 1.5)))
+    FS_SHIFT = max(6.5, min(10.5, ROW_H * 1.1))
 
     PAD = 1.5  # inner cell padding mm
 

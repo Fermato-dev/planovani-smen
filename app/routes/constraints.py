@@ -8,7 +8,7 @@ from app.models.company_vacation import (
     get_all_company_vacations, create_company_vacation,
     delete_company_vacation, update_company_vacation
 )
-from app.services.planner_service import ABSENCE_TYPES
+from app.services.planner_service import ABSENCE_TYPES, get_overlapping_plans, apply_constraints_to_plan
 
 bp = Blueprint('constraints', __name__, url_prefix='/constraints')
 
@@ -85,6 +85,15 @@ def add():
     try:
         create_constraint(employee_id, date_from, date_to, type_, note=note, half_day=half_day)
         flash('Omezení přidáno.', 'success')
+        # Auto-apply to any existing plans that overlap this date range
+        overlapping = get_overlapping_plans(date_from, date_to)
+        if overlapping:
+            total_applied = 0
+            for plan, _ in overlapping:
+                applied, _ = apply_constraints_to_plan(plan['id'], plan['week_start'], employee_id=employee_id)
+                total_applied += applied
+            if total_applied:
+                flash(f'Absence automaticky aplikována do {len(overlapping)} týdne/týdnů v plánu.', 'info')
     except Exception as e:
         flash(f'Chyba: {e}', 'error')
 
@@ -112,6 +121,18 @@ def edit(constraint_id):
                       note=note,
                       half_day=half_day)
     flash('Omezení aktualizováno.', 'success')
+    # Auto-apply to any existing plans that overlap this date range
+    try:
+        overlapping = get_overlapping_plans(date_from, date_to)
+        if overlapping:
+            total_applied = 0
+            for plan, _ in overlapping:
+                applied, _ = apply_constraints_to_plan(plan['id'], plan['week_start'], employee_id=employee_id)
+                total_applied += applied
+            if total_applied:
+                flash(f'Absence automaticky aplikována do {len(overlapping)} týdne/týdnů v plánu.', 'info')
+    except Exception as e:
+        flash(f'Chyba při aplikaci do plánu: {e}', 'error')
     return redirect(url_for('constraints.index'))
 
 

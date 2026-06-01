@@ -106,6 +106,14 @@
                         <i class="bi bi-arrow-repeat"></i> Přeplnit z vzorů
                     </button>
                 </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <form method="POST" action="{{ url_for('planner.apply_absences', plan_id=plan.id) }}">
+                        <button type="submit" class="dropdown-item text-warning">
+                            <i class="bi bi-calendar-x"></i> Aktualizovat absence
+                        </button>
+                    </form>
+                </li>
             </ul>
         </div>
         <a href="{{ url_for('capacity.board_view', week_start=week_start) }}"
