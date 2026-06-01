@@ -177,11 +177,11 @@ def generate_week_pdf(plan, grid, brigada_grid, dates, day_names):
     pdf.set_y(y + DHDR_H)
 
     # ── Row drawing ────────────────────────────────────────────────────────
-    GRID_COLOR  = ( 90, 105, 140)   # cell border colour – darker for print
-    NAME_BG_E   = (220, 222, 226)   # even row name bg – neutral gray
-    NAME_BG_O   = (232, 234, 237)   # odd  row name bg – neutral gray
-    VOLNO_FG    = (130, 145, 175)
-    NOWORK_BG   = (240, 241, 243)
+    GRID_COLOR  = (160, 170, 195)   # cell border colour
+    NAME_BG_E   = (230, 235, 250)   # even row name bg – soft blue-white
+    NAME_BG_O   = (242, 244, 252)   # odd  row name bg
+    VOLNO_FG    = (150, 160, 185)
+    NOWORK_BG   = (240, 241, 245)
 
     row_idx = [0]
 
@@ -243,21 +243,20 @@ def generate_week_pdf(plan, grid, brigada_grid, dates, day_names):
                 shift     = _t(a.get('shift_name') or '')
                 vr, vg, vb = _dept_rgb(dept, a.get('dept_color') or '')
 
-                # Coloured cell background – stronger mix for print visibility
-                pr, pg, pb = _pastel(vr, vg, vb, mix=0.45 if wknd else 0.38)
+                # Coloured cell background + uniform vivid border on all sides
+                pr, pg, pb = _pastel(vr, vg, vb, mix=0.42 if wknd else 0.35)
                 pdf.set_fill_color(pr, pg, pb)
+                pdf.set_draw_color(vr, vg, vb)
+                pdf.set_line_width(0.4)
                 pdf.rect(x, y0, DAY_W, ROW_H, 'FD')
-
-                # Left accent stripe in vivid colour
-                STRIPE = 3.0
-                pdf.set_fill_color(vr, vg, vb)
-                pdf.rect(x, y0, STRIPE, ROW_H, 'F')
+                pdf.set_line_width(0.2)
+                pdf.set_draw_color(*GRID_COLOR)   # reset for next cell
 
                 # Text colours: strong dark for print readability
                 dr2, dg2, db2 = _darken(vr, vg, vb, 0.45)
 
-                tx = x + STRIPE + PAD
-                tw = DAY_W - STRIPE - PAD
+                tx = x + PAD
+                tw = DAY_W - 2 * PAD
 
                 if TWO_LINE and (task or dept) and shift:
                     # Line 1: dept abbrev + task name (bold)
@@ -268,7 +267,7 @@ def generate_week_pdf(plan, grid, brigada_grid, dates, day_names):
                     pdf.set_font('Helvetica', 'B', FS_TASK)
                     pdf.set_xy(tx, y0 + (ROW_H - top_h - bot_h) / 2)
                     pdf.cell(tw, top_h, line1, border=0)
-                    # Line 2: shift time – slightly lighter but still readable
+                    # Line 2: shift time
                     pdf.set_text_color(*_darken(vr, vg, vb, 0.55))
                     pdf.set_font('Helvetica', '', FS_SHIFT)
                     pdf.set_xy(tx, y0 + top_h)
