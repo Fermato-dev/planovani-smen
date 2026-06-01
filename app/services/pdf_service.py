@@ -89,29 +89,29 @@ def generate_week_pdf(plan, grid, brigada_grid, dates, day_names):
 
     # ── Geometry ───────────────────────────────────────────────────────────
     PAGE_W, PAGE_H = 420, 297
-    MX, MY = 5, 5
-    IW = PAGE_W - 2 * MX          # 410 mm
-    IH = PAGE_H - 2 * MY          # 287 mm
+    MX, MY = 3, 3                  # tighter margins → more row space
+    IW = PAGE_W - 2 * MX          # 414 mm
+    IH = PAGE_H - 2 * MY          # 291 mm
 
-    TITLE_H = 9
-    DHDR_H  = 8
-    NAME_W  = IW * 0.13           # ~53 mm
+    TITLE_H = 7
+    DHDR_H  = 7
+    NAME_W  = IW * 0.13           # ~54 mm
     DAY_W   = (IW - NAME_W) / 7  # ~51 mm
 
     n_reg  = len(grid)
     n_brig = len(brigada_grid)
-    SEP_H  = 3.5 if brigada_grid else 0
+    SEP_H  = 3 if brigada_grid else 0
     avail  = IH - TITLE_H - DHDR_H - SEP_H
     n_rows = n_reg + n_brig
-    ROW_H  = max(5.0, avail / n_rows) if n_rows else 7
+    ROW_H  = max(5.5, avail / n_rows) if n_rows else 8
 
-    TWO_LINE = ROW_H >= 7.5       # show task + shift on separate lines
+    TWO_LINE = ROW_H >= 8.0       # show task + shift on separate lines
 
-    FS_TITLE = 11
+    FS_TITLE = 10
     FS_HDR   = 7
-    FS_NAME  = max(6.0, min(9.0,  ROW_H * 1.25))
-    FS_TASK  = max(5.5, min(8.5,  ROW_H * (1.1 if TWO_LINE else 1.2)))
-    FS_SHIFT = max(4.5, min(7.0,  ROW_H * 0.85))
+    FS_NAME  = max(7.0, min(11.0, ROW_H * 1.35))
+    FS_TASK  = max(6.5, min(10.5, ROW_H * (1.2 if TWO_LINE else 1.3)))
+    FS_SHIFT = max(5.5, min( 9.0, ROW_H * 0.95))
 
     PAD = 1.5  # inner cell padding mm
 
