@@ -1,26 +1,100 @@
 {% extends "base.html" %}
 {% block title %}Prehled{% endblock %}
 
+{% block extra_css %}
+<style>
+/* ── Dashboard: fit entire page in viewport ── */
+body:has(#dashboard-root) .main-content {
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 0.5rem;
+}
+
+#dashboard-root {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    overflow: hidden;
+}
+
+/* Page header: compact */
+#dashboard-root .page-header {
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
+    flex-shrink: 0;
+}
+#dashboard-root .page-header h1 { font-size: 1.1rem; margin: 0; }
+#dashboard-root .page-header .page-header-sub { font-size: .78rem; }
+
+/* Today widget: compact, no grow */
+.dashboard-today { flex-shrink: 0; }
+
+/* Absence calendar section: fills remaining space */
+.dashboard-cal-section {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.dashboard-cal-section > .card {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    margin-bottom: 0;
+}
+.dashboard-cal-section .card-header { flex-shrink: 0; }
+
+/* Force absence calendar to fill remaining card space */
+#absence-calendar {
+    flex: 1 !important;
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+}
+#absence-calendar .cal-scroll-wrapper {
+    flex: 1 !important;
+    min-height: 0 !important;
+    overflow: auto !important;
+}
+.cal-legend { flex-shrink: 0; }
+
+/* Tighter dept cards */
+.dept-card-header { padding: .45rem .85rem .4rem; }
+.dept-card-body   { padding: .4rem .8rem .5rem; }
+.dept-task-row    { padding: .18rem 0; }
+</style>
+{% endblock %}
+
 {% block content %}
+<div id="dashboard-root">
+
+{# ── Page header ── #}
 <div class="page-header">
     <div>
         <h1><i class="bi bi-house-door"></i> Prehled</h1>
-        <div class="page-header-sub">Dashboard a rychle akce</div>
+        <div class="page-header-sub">Dashboard</div>
     </div>
 </div>
 
 {# ── Dnešní obsazení ── #}
-<div class="mb-4">
-    {# Top bar: date + total #}
+<div class="dashboard-today">
     <div class="d-flex justify-content-between align-items-center mb-2">
         <div class="d-flex align-items-center gap-2">
-            <i class="bi bi-person-check" style="font-size:1.1rem; color:var(--fm-primary);"></i>
-            <span style="font-weight:600; font-size:1rem;">Dnes v práci</span>
-            <span class="text-muted" style="font-size:.88rem;">{{ now.strftime('%d.%m.%Y') }}</span>
+            <i class="bi bi-person-check" style="font-size:1rem; color:var(--fm-primary);"></i>
+            <span style="font-weight:600; font-size:.95rem;">Dnes v práci</span>
+            <span class="text-muted" style="font-size:.83rem;">{{ now.strftime('%d.%m.%Y') }}</span>
             {% if today_staffing %}
                 {% set total = today_staffing | sum(attribute='staff_count') %}
-                <span style="background:var(--fm-primary); color:#fff; font-weight:800; font-size:.85rem;
-                             padding:.15em .65em; border-radius:20px; letter-spacing:.02em;">
+                <span style="background:var(--fm-primary); color:#fff; font-weight:800; font-size:.8rem;
+                             padding:.12em .6em; border-radius:20px; letter-spacing:.02em;">
                     {{ total }} lidí celkem
                 </span>
             {% endif %}
@@ -31,85 +105,72 @@
     </div>
 
     {% if today_staffing %}
-    <div class="d-flex flex-wrap gap-3">
+    <div class="d-flex flex-wrap gap-2">
     {% for dept in today_staffing %}
-        {% set c = dept['color'] or '#6b7280' %}
-        {# Slightly lightened header bg for readability #}
         {% set ch = dept['color_header'] %}
         {% set cb = dept['color_body'] %}
-        <div style="flex:1 1 190px; min-width:170px; border-radius:10px; overflow:hidden;
-                    box-shadow:0 2px 10px rgba(0,0,0,.12); border:2px solid {{ ch }};">
-
-            {# Vivid coloured header #}
-            <div style="background:{{ ch }}; padding:.65rem 1rem .55rem; display:flex; align-items:center; justify-content:space-between;">
-                <span style="color:#fff; font-weight:800; font-size:1.05rem; letter-spacing:.04em; text-shadow:0 1px 2px rgba(0,0,0,.2);">{{ dept['name'] }}</span>
-                <span style="color:#fff; font-size:2.1rem; font-weight:900; line-height:1; text-shadow:0 1px 3px rgba(0,0,0,.2);">{{ dept['staff_count'] }}</span>
+        <div style="flex:1 1 170px; min-width:150px; border-radius:8px; overflow:hidden;
+                    box-shadow:0 1px 6px rgba(0,0,0,.10); border:1.5px solid {{ ch }};">
+            <div class="dept-card-header" style="background:{{ ch }}; display:flex; align-items:center; justify-content:space-between;">
+                <span style="color:#fff; font-weight:800; font-size:.95rem; letter-spacing:.03em;">{{ dept['name'] }}</span>
+                <span style="color:#fff; font-size:1.8rem; font-weight:900; line-height:1;">{{ dept['staff_count'] }}</span>
             </div>
-
-            {# Lightly tinted task body #}
-            <div style="background:{{ cb }}; padding:.55rem .9rem .65rem;">
-            {% if dept['tasks'] %}
-                {% for task in dept['tasks'] %}
-                    {% set max_s = task['max_staff'] %}
-                    {% set show_max = max_s and max_s < 50 %}
-                    {% set over = show_max and task['staff_count'] > max_s %}
-                    {% set pct = ([[(task['staff_count'] / max_s * 100)|int, 100]|min, 0]|max) if show_max else 100 %}
-                    {% set tc = '#dc2626' if over else ch %}
-                <div style="display:flex; align-items:center; gap:.45rem; padding:.24rem 0;
-                            border-bottom:1px solid rgba(0,0,0,.06);">
-                    <span style="font-size:.83rem; color:#1f2937; flex:1; white-space:nowrap;
-                                 overflow:hidden; text-overflow:ellipsis; max-width:110px;"
-                          title="{{ task['name'] }}">{{ task['name'] }}</span>
-                    <div style="flex:1; height:5px; background:rgba(0,0,0,.08); border-radius:3px; overflow:hidden; min-width:28px;">
-                        <div style="width:{{ pct }}%; height:100%; background:{{ tc }}; border-radius:3px;"></div>
+            <div class="dept-card-body" style="background:{{ cb }};">
+            {% for task in dept['tasks'] %}
+                {% set max_s = task['max_staff'] %}
+                {% set show_max = max_s and max_s < 50 %}
+                {% set over = show_max and task['staff_count'] > max_s %}
+                {% set pct = ([[(task['staff_count'] / max_s * 100)|int, 100]|min, 0]|max) if show_max else 100 %}
+                {% set tc = '#dc2626' if over else ch %}
+                <div class="dept-task-row" style="display:flex; align-items:center; gap:.4rem; border-bottom:1px solid rgba(0,0,0,.05);">
+                    <span style="font-size:.78rem; color:#1f2937; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100px;" title="{{ task['name'] }}">{{ task['name'] }}</span>
+                    <div style="flex:1; height:4px; background:rgba(0,0,0,.08); border-radius:2px; overflow:hidden; min-width:20px;">
+                        <div style="width:{{ pct }}%; height:100%; background:{{ tc }}; border-radius:2px;"></div>
                     </div>
-                    <span style="font-size:.92rem; font-weight:700; color:{{ tc }}; white-space:nowrap; min-width:1.4rem; text-align:right;">
-                        {{ task['staff_count'] }}{% if show_max %}<span style="font-weight:400; color:#6b7280; font-size:.75rem;"> /{{ max_s }}</span>{% endif %}
+                    <span style="font-size:.85rem; font-weight:700; color:{{ tc }}; white-space:nowrap; min-width:1.2rem; text-align:right;">
+                        {{ task['staff_count'] }}{% if show_max %}<span style="font-weight:400; color:#9ca3af; font-size:.72rem;"> /{{ max_s }}</span>{% endif %}
                     </span>
                 </div>
-                {% endfor %}
             {% else %}
-                <span style="font-size:.8rem; color:#9ca3af;">žádné úkoly</span>
-            {% endif %}
+                <span style="font-size:.75rem; color:#9ca3af;">žádné úkoly</span>
+            {% endfor %}
             </div>
         </div>
     {% endfor %}
     </div>
     {% else %}
-    <div class="card">
-        <div class="card-body text-muted small py-3">
-            <i class="bi bi-calendar-x me-1"></i>
-            Pro tento týden zatím není vytvořený plán.
-            <a href="{{ url_for('planner.index') }}" class="ms-2">Vytvořit plán</a>
-        </div>
+    <div class="card py-2 px-3 text-muted small">
+        <i class="bi bi-calendar-x me-1"></i>
+        Pro tento týden zatím není vytvořený plán.
+        <a href="{{ url_for('planner.index') }}" class="ms-2">Vytvořit plán</a>
     </div>
     {% endif %}
 </div>
 
 {# ── Měsíční přehled absencí ── #}
-<div class="card mt-2">
-  <div class="card-header d-flex align-items-center gap-2">
-    <i class="bi bi-calendar3 me-1"></i>
-    <span>Přehled absencí</span>
-    <span class="text-muted ms-1" style="font-size:.85em;">– klikni na buňku pro detail</span>
+<div class="dashboard-cal-section">
+  <div class="card">
+    <div class="card-header d-flex align-items-center gap-2" style="padding:.5rem .85rem;">
+        <i class="bi bi-calendar3 me-1"></i>
+        <span style="font-size:.9rem;">Přehled absencí</span>
+        <span class="text-muted ms-1" style="font-size:.8em;">– klikni na buňku pro detail</span>
+    </div>
+    {% include 'dashboard/_absence_calendar.html' %}
   </div>
-  {% include 'dashboard/_absence_calendar.html' %}
 </div>
 
 {% if not employees %}
-<div class="card mt-3">
+<div class="card">
     <div class="card-body">
         <div class="empty-state">
             <i class="bi bi-rocket-takeoff d-block"></i>
             <h5>Zaciname!</h5>
-            <p class="text-muted">
-                Pro zacatek zkontrolujte <strong>Nastaveni</strong> (oddeleni, smeny) a pak pridejte <strong>zamestnance</strong>.
-            </p>
-            <a href="{{ url_for('settings.index') }}" class="btn btn-primary">
-                <i class="bi bi-gear"></i> Otevrit nastaveni
-            </a>
+            <p class="text-muted">Pro zacatek zkontrolujte <strong>Nastaveni</strong> a pridejte <strong>zamestnance</strong>.</p>
+            <a href="{{ url_for('settings.index') }}" class="btn btn-primary"><i class="bi bi-gear"></i> Otevrit nastaveni</a>
         </div>
     </div>
 </div>
 {% endif %}
+
+</div>{# end #dashboard-root #}
 {% endblock %}
