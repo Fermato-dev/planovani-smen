@@ -107,32 +107,35 @@ body:has(#dashboard-root) .main-content {
     {% if today_staffing %}
     <div class="d-flex flex-wrap gap-2">
     {% for dept in today_staffing %}
-        {% set ch = dept['color_header'] %}
-        {% set cb = dept['color_body'] %}
-        <div style="flex:1 1 170px; min-width:150px; border-radius:8px; overflow:hidden;
-                    box-shadow:0 1px 6px rgba(0,0,0,.10); border:1.5px solid {{ ch }};">
-            <div class="dept-card-header" style="background:{{ ch }}; display:flex; align-items:center; justify-content:space-between;">
-                <span style="color:#fff; font-weight:800; font-size:.95rem; letter-spacing:.03em;">{{ dept['name'] }}</span>
-                <span style="color:#fff; font-size:1.8rem; font-weight:900; line-height:1;">{{ dept['staff_count'] }}</span>
+        {% set c  = dept['color'] %}
+        {% set ft = dept['text_color'] %}
+        {% set cb = dept['tint'] %}
+        <div style="flex:1 1 160px; min-width:140px; border-radius:8px; overflow:hidden;
+                    box-shadow:0 1px 6px rgba(0,0,0,.10); border:1.5px solid {{ c }};">
+            {# Header: dept name + count #}
+            <div style="background:{{ c }}; padding:.35rem .75rem; display:flex; align-items:center; justify-content:space-between;">
+                <span style="color:{{ ft }}; font-weight:800; font-size:.9rem; letter-spacing:.03em;">{{ dept['name'] }}</span>
+                <span style="color:{{ ft }}; font-size:1.6rem; font-weight:900; line-height:1;">{{ dept['staff_count'] }}</span>
             </div>
-            <div class="dept-card-body" style="background:{{ cb }};">
+            {# Task rows — compact #}
+            <div style="background:{{ cb }}; padding:.2rem .6rem .25rem;">
             {% for task in dept['tasks'] %}
                 {% set max_s = task['max_staff'] %}
                 {% set show_max = max_s and max_s < 50 %}
                 {% set over = show_max and task['staff_count'] > max_s %}
                 {% set pct = ([[(task['staff_count'] / max_s * 100)|int, 100]|min, 0]|max) if show_max else 100 %}
-                {% set tc = '#dc2626' if over else ch %}
-                <div class="dept-task-row" style="display:flex; align-items:center; gap:.4rem; border-bottom:1px solid rgba(0,0,0,.05);">
-                    <span style="font-size:.78rem; color:#1f2937; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100px;" title="{{ task['name'] }}">{{ task['name'] }}</span>
-                    <div style="flex:1; height:4px; background:rgba(0,0,0,.08); border-radius:2px; overflow:hidden; min-width:20px;">
-                        <div style="width:{{ pct }}%; height:100%; background:{{ tc }}; border-radius:2px;"></div>
+                {% set tc = '#dc2626' if over else c %}
+                <div style="display:flex; align-items:center; gap:.3rem; padding:.08rem 0; border-bottom:1px solid rgba(0,0,0,.04);">
+                    <span style="font-size:.72rem; color:#374151; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:95px;" title="{{ task['name'] }}">{{ task['name'] }}</span>
+                    <div style="flex:1; height:3px; background:rgba(0,0,0,.07); border-radius:2px; overflow:hidden; min-width:16px;">
+                        <div style="width:{{ pct }}%; height:100%; background:{{ tc }};"></div>
                     </div>
-                    <span style="font-size:.85rem; font-weight:700; color:{{ tc }}; white-space:nowrap; min-width:1.2rem; text-align:right;">
-                        {{ task['staff_count'] }}{% if show_max %}<span style="font-weight:400; color:#9ca3af; font-size:.72rem;"> /{{ max_s }}</span>{% endif %}
+                    <span style="font-size:.78rem; font-weight:700; color:{{ tc }}; white-space:nowrap;">
+                        {{ task['staff_count'] }}{% if show_max %}<span style="font-weight:400; color:#9ca3af; font-size:.68rem;"> /{{ max_s }}</span>{% endif %}
                     </span>
                 </div>
             {% else %}
-                <span style="font-size:.75rem; color:#9ca3af;">žádné úkoly</span>
+                <span style="font-size:.7rem; color:#9ca3af;">žádné úkoly</span>
             {% endfor %}
             </div>
         </div>
