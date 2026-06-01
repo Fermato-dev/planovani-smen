@@ -177,27 +177,8 @@ body {
     -webkit-print-color-adjust: exact; print-color-adjust: exact;
 }
 
-/* ── Summary strip (PDF) ── */
-{% if is_pdf %}
-.summary-wrap {
-    margin-top: 4mm; padding-top: 3mm;
-    border-top: 1.5px solid #bfdbfe;
-    -webkit-print-color-adjust: exact; print-color-adjust: exact;
-}
-.summary-strip { display: flex; gap: 8mm; flex-wrap: wrap; }
-.sum-day-label {
-    font-size: 7.5pt; font-weight: 700; color: #1e3a8a;
-    text-transform: uppercase; margin-bottom: 1mm;
-    padding-bottom: 1mm; border-bottom: 1px solid #bfdbfe;
-}
-.sum-line { font-size: 7.5pt; color: #374151; margin-top: 0.5mm; }
-.sum-dept {
-    display: inline-block; border-radius: 2px; padding: 0 2px;
-    font-size: 7pt; font-weight: 700; color: #1a1a1a;
-    -webkit-print-color-adjust: exact; print-color-adjust: exact;
-}
-
-{% else %}
+/* ── Summary table (board only) ── */
+{% if not is_pdf %}
 /* ── Summary table (board) ── */
 .summary-wrap { margin-top: 14px; }
 .summary-title {
@@ -247,8 +228,7 @@ body {
     thead  { display: table-header-group; }
     .sched-table tbody tr { page-break-inside: avoid; break-inside: avoid; }
     .brigada-sep          { page-break-after:  avoid;  break-after:  avoid; }
-    .summary-wrap         { page-break-inside: avoid;  break-inside: avoid; }
-    .legend               { page-break-inside: avoid;  break-inside: avoid; }
+    .legend               { display: none; }
 {% else %}
     @page { size: A4 landscape; margin: 8mm; }
     body   { font-size: 10pt; }
@@ -269,13 +249,18 @@ body {
 
 {# Toolbar #}
 <div class="toolbar">
-    <button class="print-btn" onclick="window.print()">
-        🖨 {% if is_pdf %}Uložit jako PDF{% else %}Tisknout{% endif %}
-    </button>
     {% if is_pdf %}
-    <a class="print-btn sec" href="?mode=board">Přepnout na A4 nástěnka</a>
+    {# Server-side WeasyPrint – guaranteed 1 page #}
+    <a class="print-btn" href="{{ request.path | replace('/print', '/pdf-download') }}">
+        ⬇ Stáhnout PDF (1 strana)
+    </a>
+    <button class="print-btn sec" onclick="window.print()" style="font-size:12px">
+        🖨 Tisknout v prohlížeči
+    </button>
+    <a class="print-btn sec" href="?mode=board">Nástěnka A4</a>
     {% else %}
-    <a class="print-btn sec" href="?mode=pdf">Přepnout na PDF (email)</a>
+    <button class="print-btn" onclick="window.print()">🖨 Tisknout (A4 nástěnka)</button>
+    <a class="print-btn sec" href="?mode=pdf">PDF pro email</a>
     {% endif %}
 </div>
 
@@ -343,24 +328,8 @@ body {
 </tbody>
 </table>
 
-{# ── Summary ── #}
-{% if is_pdf %}
-<div class="summary-wrap">
-  <div class="summary-strip">
-    {% for d in dates %}{% set ds = d.isoformat() %}{% if summary.get(ds) %}
-    <div>
-        <div class="sum-day-label">{{ day_names[loop.index0] }} {{ d.strftime('%d.%m.') }}</div>
-        {% for s in summary.get(ds,[]) %}
-        <div class="sum-line">
-            <span class="sum-dept" style="background:#{{ s.color }}">{{ s.name }}</span> <strong>{{ s.staff_count }}</strong>{% for t in task_summary.get(ds,[]) if t.department_id==s.id %} &middot; {{ t.name }} {{ t.staff_count }}{% endfor %}
-        </div>
-        {% endfor %}
-    </div>
-    {% endif %}{% endfor %}
-  </div>
-</div>
-
-{% else %}
+{# ── Summary – jen pro nástěnku (board), PDF má jen tabulku zaměstnanců ── #}
+{% if not is_pdf %}
 <div class="summary-wrap">
   <div class="summary-title">Obsazení pracovišť</div>
   <table class="sum-table">

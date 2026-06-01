@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:Arial,Helvetica,sans-serif;">
+
+{%- set AL = {
+    'dovolena':'Dovolená','nemoc':'Nemoc','lekar':'Lékař',
+    'osobni':'Osobní','nahradni':'Náhr. volno','jine':'Jiné','svatek':'Svátek'
+} -%}
+{%- set ABS_BG = {
+    'dovolena':'#fef3c7','nemoc':'#fee2e2','lekar':'#dbeafe',
+    'osobni':'#d1fae5','nahradni':'#ede9fe','jine':'#e5e7eb','svatek':'#fef9c3'
+} -%}
+{%- set ABS_FG = {
+    'dovolena':'#92400e','nemoc':'#991b1b','lekar':'#1e40af',
+    'osobni':'#065f46','nahradni':'#5b21b6','jine':'#374151','svatek':'#713f12'
+} -%}
+{%- set DAYS = ['Po','Út','St','Čt','Pá','So','Ne'] -%}
+
+<div style="max-width:680px;margin:24px auto;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.12);">
+
+  <!-- HEADER -->
+  <div style="background:#1e40af;padding:20px 24px;">
+    <p style="margin:0;font-size:11px;color:#93c5fd;letter-spacing:.05em;text-transform:uppercase;">FerMato Smeny</p>
+    <h1 style="margin:4px 0 0;font-size:20px;color:#fff;font-weight:700;">Plán směn &ndash; {{ week_label }}</h1>
+  </div>
+
+  <!-- GREETING -->
+  <div style="padding:20px 24px 8px;">
+    <p style="margin:0 0 6px;font-size:15px;color:#1e293b;">Dobrý den <strong>{{ emp_name }}</strong>,</p>
+    <p style="margin:0;font-size:13px;color:#64748b;">zde je váš pracovní rozpis na nadcházející {{ '2 týdny' if rows2 else 'týden' }}:</p>
+  </div>
+
+  <!-- WEEKS -->
+  {% for week_num, plan_obj, dates, rows in schedule_weeks %}
+  <div style="padding:12px 24px {{ '0' if not loop.last else '16px' }};">
+    <div style="background:#1e3a8a;color:#fff;padding:7px 12px;border-radius:5px 5px 0 0;font-size:12px;font-weight:700;">
+      Týden {{ plan_obj.week_number }}/{{ plan_obj.year }}
+      <span style="font-weight:400;margin-left:8px;opacity:.8;">{{ dates[0].strftime('%d.%m.') }} – {{ dates[6].strftime('%d.%m.%Y') }}</span>
+    </div>
+
+    <table style="width:100%;border-collapse:collapse;font-size:12px;">
+      <!-- Day headers -->
+      <thead>
+        <tr>
+          {% for d in dates %}
+          <th style="border:1px solid #e2e8f0;padding:6px 3px;text-align:center;font-size:11px;font-weight:700;
+                     background:{{ '#e0e7ff' if d.weekday()>=5 else '#eff6ff' }};
+                     color:{{ '#3730a3' if d.weekday()>=5 else '#1e3a8a' }};">
+            {{ DAYS[d.weekday()] }}<br>
+            <span style="font-weight:400;color:#64748b;">{{ d.strftime('%d.%m.') }}</span>
+          </th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          {% for day in rows %}
+          {% set a = day.assignment %}
+          {% set wknd = day.is_weekend %}
+          {% set base_bg = '#eef2ff' if wknd else '#ffffff' %}
+
+          {% if a and a.is_absence %}
+            {%- set bg = ABS_BG.get(a.absence_type or 'jine','#e5e7eb') -%}
+            {%- set fg = ABS_FG.get(a.absence_type or 'jine','#374151') -%}
+            <td style="border:1px solid #e2e8f0;padding:8px 5px;text-align:center;vertical-align:middle;background:{{ bg }};">
+              <span style="display:inline-block;background:{{ bg }};color:{{ fg }};font-weight:700;font-size:11px;padding:2px 6px;border-radius:3px;border:1px solid {{ fg }}40;">
+                {{ AL.get(a.absence_type,'Jiné') }}
+              </span>
+              {% if a.note %}<div style="font-size:10px;color:#64748b;margin-top:3px;font-style:italic;">{{ a.note }}</div>{% endif %}
+            </td>
+
+          {% elif a and not a.is_absence %}
+            <td style="border:1px solid #e2e8f0;padding:7px 5px;vertical-align:top;background:{{ base_bg }};">
+              {% if a.dept_name %}
+              <span style="display:inline-block;background:#{{ a.dept_color or 'D9D9D9' }};color:#1a1a1a;
+                           font-size:10px;font-weight:700;padding:0 4px;border-radius:2px;margin-bottom:3px;">
+                {{ a.dept_name }}
+              </span>
+              {% endif %}
+              {% if a.task_name %}<div style="font-size:12px;color:#1e293b;font-weight:600;margin-bottom:2px;">{{ a.task_name }}</div>{% endif %}
+              {% if a.shift_name %}<div style="font-size:11px;color:#475569;">{{ a.shift_name }}</div>{% endif %}
+              {% if a.note %}<div style="font-size:10px;color:#94a3b8;font-style:italic;margin-top:2px;">{{ a.note }}</div>{% endif %}
+            </td>
+
+          {% elif not day.works_on_day %}
+            <td style="border:1px solid #e2e8f0;padding:7px 5px;background:#f8fafc;text-align:center;">
+              <span style="color:#cbd5e1;font-size:11px;">–</span>
+            </td>
+
+          {% else %}
+            <td style="border:1px solid #e2e8f0;padding:7px 5px;background:{{ base_bg }};text-align:center;">
+              <span style="color:#94a3b8;font-size:11px;">volno</span>
+            </td>
+          {% endif %}
+
+          {% endfor %}
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  {% endfor %}
+
+  <!-- FOOTER -->
+  <div style="background:#f8fafc;border-top:1px solid #e2e8f0;padding:16px 24px;text-align:center;margin-top:8px;">
+    <p style="margin:0;font-size:11px;color:#94a3b8;">
+      FerMato Smeny &nbsp;&middot;&nbsp; Plánování směn
+      &nbsp;&middot;&nbsp; Generováno automaticky, neodpovídejte na tento email.
+    </p>
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,4 +1,5 @@
-from flask import Blueprint, make_response, abort, render_template, request
+import logging
+from flask import Blueprint, make_response, abort, render_template, request, redirect, url_for
 from app.models.plan import get_plan_by_week
 from app.models.day_requirement import get_requirements_map
 from app.models.shift import get_all_shifts
@@ -6,6 +7,7 @@ from app.services.planner_service import build_plan_grid, get_staffing_summary, 
 from app.services.export_service import generate_week_excel
 
 bp = Blueprint('export', __name__, url_prefix='/export')
+logger = logging.getLogger(__name__)
 
 DAY_NAMES = ['Po', 'Út', 'St', 'Čt', 'Pá', 'So', 'Ne']
 
@@ -33,18 +35,53 @@ def export_week(week_start):
     return response
 
 
+@bp.route('/week/<week_start>/pdf-download')
+def download_pdf(week_start):
+    """Server-side WeasyPrint PDF – guarantees one page, no browser dialog."""
+    plan = get_plan_by_week(week_start)
+    if not plan:
+        abort(404)
+
+    grid, brigada_grid, dates = build_plan_grid(plan['id'], week_start)
+    summary, task_summary = get_staffing_summary(plan['id'], dates)
+    req_map = get_requirements_map(plan['id'], dates)
+    shifts = get_all_shifts()
+
+    html = render_template('planner/week_print.html',
+                           plan=plan, grid=grid, brigada_grid=brigada_grid,
+                           dates=dates, summary=summary, task_summary=task_summary,
+                           req_map=req_map, shifts=shifts, day_names=DAY_NAMES,
+                           print_mode='pdf')
+    try:
+        from weasyprint import HTML
+        pdf_bytes = HTML(string=html).write_pdf()
+    except Exception as e:
+        logger.error(f"WeasyPrint failed: {e}", exc_info=True)
+        abort(500, description=f"Generování PDF selhalo: {e}")
+
+    fn = f"Plan_smen_T{plan['week_number']}_{dates[0].strftime('%d%m')}-{dates[6].strftime('%d%m%Y')}.pdf"
+    resp = make_response(pdf_bytes)
+    resp.headers['Content-Type'] = 'application/pdf'
+    resp.headers['Content-Disposition'] = f'attachment; filename="{fn}"'
+    return resp
+
+
 @bp.route('/week/<week_start>/print')
 def print_week(week_start):
     """Tisková stránka týdenního plánu.
 
-    ?mode=pdf  (výchozí) – A3 landscape, PDF/email verze
-    ?mode=board           – A4 landscape, velké písmo, pro nástěnku
+    ?mode=pdf   → přesměruje na WeasyPrint stahování (1 strana, garantováno)
+    ?mode=board → A4 landscape, velké písmo, pro nástěnku (browser print)
     """
     plan = get_plan_by_week(week_start)
     if not plan:
         abort(404)
 
     mode = request.args.get('mode', 'pdf')  # 'pdf' or 'board'
+
+    # PDF mode → server-side WeasyPrint guarantees single page, no browser dialog confusion
+    if mode == 'pdf':
+        return redirect(url_for('export.download_pdf', week_start=week_start))
 
     grid, brigada_grid, dates = build_plan_grid(plan['id'], week_start)
     summary, task_summary = get_staffing_summary(plan['id'], dates)

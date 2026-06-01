@@ -55,6 +55,22 @@ def is_smtp_configured():
 # Odeslání emailu
 # ---------------------------------------------------------------------------
 
+def send_personal_email(to_email, employee_name, week_label, html_body):
+    """Odešle personalizovaný HTML email bez přílohy."""
+    smtp = _get_smtp_settings()
+    if smtp.get('server') and smtp.get('username') and smtp.get('password'):
+        _send_via_smtp(to_email, employee_name, week_label, [], smtp,
+                       html_body=html_body)
+    elif _get_resend_key():
+        _send_via_resend(to_email, employee_name, week_label, [],
+                         html_body=html_body)
+    else:
+        raise ValueError(
+            "Email není nakonfigurován. "
+            "Nastavte SMTP (Gmail) v záložce Nastavení → Email."
+        )
+
+
 def send_schedule_email(to_email, employee_name, week_label, attachments):
     """Odešle rozpis směn jako přílohu emailem.
 
@@ -80,7 +96,8 @@ def send_schedule_email(to_email, employee_name, week_label, attachments):
         )
 
 
-def _send_via_smtp(to_email, employee_name, week_label, attachments, smtp):
+def _send_via_smtp(to_email, employee_name, week_label, attachments, smtp,
+                   html_body=None):
     """Odešle email přes SMTP (Gmail/jiný server)."""
     server = smtp['server'].strip()
     port = int(smtp.get('port') or 587)
@@ -91,13 +108,14 @@ def _send_via_smtp(to_email, employee_name, week_label, attachments, smtp):
     msg = MIMEMultipart()
     msg['From'] = sender
     msg['To'] = to_email
-    msg['Subject'] = f'Rozpis směn – {week_label}'
+    msg['Subject'] = f'Plán směn – {week_label}'
 
-    html_body = (
-        f'<p>Dobrý den {employee_name},</p>'
-        f'<p>v příloze najdete rozpis směn na <strong>{week_label}</strong>.</p>'
-        f'<p>S pozdravem,<br>Plánování směn FerMato</p>'
-    )
+    if html_body is None:
+        html_body = (
+            f'<p>Dobrý den {employee_name},</p>'
+            f'<p>v příloze najdete rozpis směn na <strong>{week_label}</strong>.</p>'
+            f'<p>S pozdravem,<br>Plánování směn FerMato</p>'
+        )
     msg.attach(MIMEText(html_body, 'html', 'utf-8'))
 
     for file_bytes, filename in attachments:
@@ -118,7 +136,8 @@ def _send_via_smtp(to_email, employee_name, week_label, attachments, smtp):
     logger.info(f"Email odeslán přes SMTP na {to_email}")
 
 
-def _send_via_resend(to_email, employee_name, week_label, attachments):
+def _send_via_resend(to_email, employee_name, week_label, attachments,
+                     html_body=None):
     """Záložní metoda – Resend API (vyžaduje ověřenou doménu)."""
     import requests
 
@@ -126,11 +145,12 @@ def _send_via_resend(to_email, employee_name, week_label, attachments):
     smtp = _get_smtp_settings()
     sender = smtp.get('sender') or 'onboarding@resend.dev'
 
-    html_body = (
-        f'<p>Dobrý den {employee_name},</p>'
-        f'<p>v příloze najdete rozpis směn na <strong>{week_label}</strong>.</p>'
-        f'<p>S pozdravem,<br>Plánování směn FerMato</p>'
-    )
+    if html_body is None:
+        html_body = (
+            f'<p>Dobrý den {employee_name},</p>'
+            f'<p>v příloze najdete rozpis směn na <strong>{week_label}</strong>.</p>'
+            f'<p>S pozdravem,<br>Plánování směn FerMato</p>'
+        )
 
     resend_attachments = []
     for file_bytes, filename in attachments:
