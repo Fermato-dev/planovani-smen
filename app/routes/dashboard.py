@@ -93,15 +93,37 @@ def _build_calendar_ctx(year, month):
 
 
 def _build_today_staffing(today):
-    """Return today's staffing by dept and task, or None if no plan exists."""
+    """Return today's staffing grouped by dept, or None if no plan exists.
+
+    Returns list of dicts:
+      {id, name, color, staff_count, tasks: [{name, staff_count, max_staff}, ...]}
+    """
     monday = get_monday(today)
     plan = get_plan_by_week(monday.isoformat())
     if not plan:
-        return None, None
+        return None
+
     ds = today.isoformat()
-    dept_summary = get_day_summary(plan['id'], ds)
-    task_summary = get_day_task_summary(plan['id'], ds)
-    return dept_summary, task_summary
+    dept_rows = get_day_summary(plan['id'], ds)
+    task_rows = get_day_task_summary(plan['id'], ds)
+
+    # Index tasks by dept
+    tasks_by_dept = {}
+    for t in task_rows:
+        tasks_by_dept.setdefault(t['department_id'], []).append(dict(t))
+
+    result = []
+    for d in dept_rows:
+        result.append({
+            'id':          d['id'],
+            'name':        d['name'],
+            'color':       d['color'] or '#6b7280',
+            'staff_count': d['staff_count'],
+            'min_staff':   d['min_staff'],
+            'max_staff':   d['max_staff'],
+            'tasks':       tasks_by_dept.get(d['id'], []),
+        })
+    return result or None
 
 
 @bp.route('/')
@@ -109,12 +131,11 @@ def index():
     today = date.today()
     employees   = get_all_employees()
     cal_ctx     = _build_calendar_ctx(today.year, today.month)
-    today_dept_summary, today_task_summary = _build_today_staffing(today)
+    today_staffing = _build_today_staffing(today)
     return render_template('dashboard/index.html',
                            employees=employees,
                            now=today,
-                           today_dept_summary=today_dept_summary,
-                           today_task_summary=today_task_summary,
+                           today_staffing=today_staffing,
                            **cal_ctx)
 
 

@@ -10,42 +10,118 @@
 </div>
 
 {# ── Dnešní obsazení ── #}
+<style>
+.today-dept-card {
+    border-radius: 10px;
+    overflow: hidden;
+    min-width: 160px;
+    flex: 1 1 160px;
+    max-width: 260px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.08);
+}
+.today-dept-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: .55rem .85rem .45rem;
+    color: #fff;
+}
+.today-dept-header .dept-name {
+    font-weight: 700;
+    font-size: .95rem;
+    letter-spacing: .02em;
+}
+.today-dept-header .dept-count {
+    font-size: 1.7rem;
+    font-weight: 800;
+    line-height: 1;
+}
+.today-dept-body {
+    padding: .5rem .85rem .6rem;
+    background: #fff;
+    border: 1.5px solid var(--dept-color);
+    border-top: none;
+    border-radius: 0 0 10px 10px;
+}
+.today-task-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .4rem;
+    padding: .18rem 0;
+    font-size: .82rem;
+    border-bottom: 1px solid #f0f0f0;
+}
+.today-task-row:last-child { border-bottom: none; }
+.today-task-count {
+    font-weight: 700;
+    font-size: .9rem;
+    white-space: nowrap;
+}
+.today-task-max {
+    font-size: .75rem;
+    color: #9ca3af;
+    white-space: nowrap;
+}
+.today-task-bar {
+    flex: 1;
+    height: 5px;
+    background: #e5e7eb;
+    border-radius: 3px;
+    overflow: hidden;
+    min-width: 30px;
+}
+.today-task-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width .3s;
+}
+</style>
+
 <div class="card mb-4">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <span><i class="bi bi-person-check me-1"></i> Dnes v práci – {{ now.strftime('%d.%m.%Y') }}</span>
-        <a href="{{ url_for('planner.index') }}"
-           class="btn btn-outline-secondary btn-sm">
+        <span><i class="bi bi-person-check me-1"></i> <strong>Dnes v práci</strong> &nbsp;
+            <span class="text-muted" style="font-size:.9em;">{{ now.strftime('%d.%m.%Y') }}</span>
+        </span>
+        <a href="{{ url_for('planner.index') }}" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-table"></i> Plán směn
         </a>
     </div>
     <div class="card-body p-3">
-    {% if today_dept_summary %}
-        {# Departments row #}
-        <div class="d-flex flex-wrap gap-2 mb-3">
-        {% for dept in today_dept_summary %}
-            {% set color = dept['color'] or '#6b7280' %}
-            <div class="d-flex align-items-center gap-1 px-3 py-2 rounded-2"
-                 style="background:{{ color }}22; border:1.5px solid {{ color }}; min-width:120px;">
-                <span class="fw-bold" style="color:{{ color }}; font-size:1.35rem; line-height:1;">{{ dept['staff_count'] }}</span>
-                <span class="ms-1 text-muted small">{{ dept['name'] }}</span>
+    {% if today_staffing %}
+        <div class="d-flex flex-wrap gap-3">
+        {% for dept in today_staffing %}
+            {% set c = dept['color'] %}
+            <div class="today-dept-card" style="--dept-color:{{ c }};">
+                <div class="today-dept-header" style="background:{{ c }};">
+                    <span class="dept-name">{{ dept['name'] }}</span>
+                    <span class="dept-count">{{ dept['staff_count'] }}</span>
+                </div>
+                <div class="today-dept-body">
+                {% if dept['tasks'] %}
+                    {% for task in dept['tasks'] %}
+                        {% set pct = ((task['staff_count'] / task['max_staff'] * 100) | int) if task['max_staff'] else 100 %}
+                        {% set pct = [pct, 100] | min %}
+                        {% set over = task['max_staff'] and task['staff_count'] > task['max_staff'] %}
+                        {% set bar_color = '#ef4444' if over else c %}
+                    <div class="today-task-row">
+                        <span class="text-truncate" style="max-width:95px;" title="{{ task['name'] }}">{{ task['name'] }}</span>
+                        <div class="today-task-bar">
+                            <div class="today-task-bar-fill" style="width:{{ pct }}%; background:{{ bar_color }};"></div>
+                        </div>
+                        <span class="today-task-count" style="color:{{ bar_color }};">{{ task['staff_count'] }}</span>
+                        {% if task['max_staff'] %}
+                        <span class="today-task-max">/ {{ task['max_staff'] }}</span>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <span class="text-muted small">žádné úkoly</span>
+                {% endif %}
+                </div>
             </div>
         {% endfor %}
         </div>
-
-        {# Task coverage #}
-        {% if today_task_summary %}
-        <div class="d-flex flex-wrap gap-2">
-        {% for task in today_task_summary %}
-            {% set color = task['dept_color'] or '#6b7280' %}
-            {% set ok = (task['max_staff'] is none) or (task['staff_count'] >= 1) %}
-            <span class="badge rounded-pill px-2 py-1"
-                  style="background:{{ color }}18; color:{{ color }}; border:1px solid {{ color }}; font-size:.8rem; font-weight:600;">
-                <i class="bi bi-{{ 'check-circle' if ok else 'exclamation-circle' }} me-1"></i>{{ task['staff_count'] }}× {{ task['name'] }}
-            </span>
-        {% endfor %}
-        </div>
-        {% endif %}
-
     {% else %}
         <div class="text-muted small py-2">
             <i class="bi bi-calendar-x me-1"></i>
