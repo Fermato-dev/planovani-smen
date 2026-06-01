@@ -142,22 +142,23 @@ def _build_today_staffing(today):
         return f'#{tr:02x}{tg:02x}{tb:02x}'
 
     result = []
-    for i, d in enumerate(dept_rows):
-        c = _DEPT_PALETTE[i % len(_DEPT_PALETTE)]
+    for d in dept_rows:
         result.append({
             'id':           d['id'],
             'name':         d['name'],
-            'color':        c,
-            'text_color':   _text_color(c),
-            'tint':         _tint(c),
             'staff_count':  d['staff_count'],
             'min_staff':    d['min_staff'],
             'max_staff':    d['max_staff'],
             'tasks':        tasks_by_dept.get(d['id'], []),
         })
 
-    # Sort: highest staff_count first (VÝR > EXP > SKL), then by name
+    # Sort first, THEN assign palette colors by final position
     result.sort(key=lambda x: (-x['staff_count'], x['name']))
+    for i, item in enumerate(result):
+        c = _DEPT_PALETTE[i % len(_DEPT_PALETTE)]
+        item['color']      = c
+        item['text_color'] = _text_color(c)
+        item['tint']       = _tint(c)
     return result or None
 
 
