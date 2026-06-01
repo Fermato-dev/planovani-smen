@@ -135,7 +135,6 @@ def generate_week_pdf(plan, grid, brigada_grid, dates, day_names):
     pdf.set_text_color(255, 255, 255)
     pdf.cell(NAME_W, DHDR_H, 'Zamestnanec', border=1, fill=True, align='L')
     for i, d in enumerate(dates):
-        pdf.set_fill_color(29, 78, 216 if d.weekday() >= 5 else 30, 64, 175)
         if d.weekday() >= 5:
             pdf.set_fill_color(29, 78, 216)
         else:
