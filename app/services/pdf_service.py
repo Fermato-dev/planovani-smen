@@ -1,41 +1,38 @@
-"""PDF generation using fpdf2 (pure Python, no system dependencies).
+"""PDF generation using fpdf2 – A3 landscape, one page, modern schedule design.
 
-Generates A3 landscape weekly schedule PDF that fits on exactly one page.
+Each cell is coloured with a light version of the department colour (like
+Google Calendar), with bold task name and smaller shift time below it.
 """
 import logging
 
 logger = logging.getLogger(__name__)
 
-# ── Absence colours (bg, text) ────────────────────────────────────────────────
-_ABS_FILL = {
-    'dovolena': (254, 243, 199),
-    'nemoc':    (254, 226, 226),
-    'lekar':    (219, 234, 254),
-    'osobni':   (209, 250, 229),
-    'nahradni': (237, 233, 254),
-    'jine':     (229, 231, 235),
-    'svatek':   (254, 249, 195),
-}
-_ABS_TEXT = {
-    'dovolena': (146, 64,  14),
-    'nemoc':    (153, 27,  27),
-    'lekar':    (30,  64, 175),
-    'osobni':   (6,   95,  70),
-    'nahradni': (91,  33, 182),
-    'jine':     (55,  65,  81),
-    'svatek':   (113, 63,  18),
-}
-_ABS_LABEL = {
-    'dovolena': 'Dovolena',
-    'nemoc':    'Nemoc',
-    'lekar':    'Lekar',
-    'osobni':   'Osobni',
-    'nahradni': 'Nahradni',
-    'jine':     'Jine',
-    'svatek':   'Svatek',
+# ── Absence palette ───────────────────────────────────────────────────────────
+_ABS = {
+    'dovolena': {'bg': (254, 243, 199), 'fg': (146,  64,  14), 'label': 'Dovolena'},
+    'nemoc':    {'bg': (254, 226, 226), 'fg': (153,  27,  27), 'label': 'Nemoc'},
+    'lekar':    {'bg': (219, 234, 254), 'fg': ( 30,  64, 175), 'label': 'Lekar'},
+    'osobni':   {'bg': (209, 250, 229), 'fg': (  6,  95,  70), 'label': 'Osobni'},
+    'nahradni': {'bg': (237, 233, 254), 'fg': ( 91,  33, 182), 'label': 'Nahradni'},
+    'jine':     {'bg': (229, 231, 235), 'fg': ( 55,  65,  81), 'label': 'Jine'},
+    'svatek':   {'bg': (254, 249, 195), 'fg': (113,  63,  18), 'label': 'Svatek'},
 }
 
-# Czech diacritics → ASCII (Helvetica built-in = Latin-1 only)
+# Palette used when a department has no colour set (D9D9D9 default)
+_PALETTE = [
+    (37,  99, 235),   # blue
+    (  5, 150, 105),  # emerald
+    (168,  85, 247),  # violet
+    (234,  88,  12),  # orange
+    (220,  38,  38),  # red
+    (  2, 132, 199),  # sky
+    (101, 163,  13),  # lime
+    (217,  70, 239),  # fuchsia
+    ( 15, 118, 110),  # teal
+    (180,  83,   9),  # amber
+]
+
+# Czech → ASCII (Helvetica = Latin-1)
 _TRANS = str.maketrans({
     'á': 'a', 'č': 'c', 'ď': 'd', 'é': 'e', 'ě': 'e', 'í': 'i',
     'ľ': 'l', 'ň': 'n', 'ó': 'o', 'ř': 'r', 'š': 's', 'ť': 't',
@@ -43,15 +40,10 @@ _TRANS = str.maketrans({
     'Á': 'A', 'Č': 'C', 'Ď': 'D', 'É': 'E', 'Ě': 'E', 'Í': 'I',
     'Ľ': 'L', 'Ň': 'N', 'Ó': 'O', 'Ř': 'R', 'Š': 'S', 'Ť': 'T',
     'Ú': 'U', 'Ů': 'U', 'Ý': 'Y', 'Ž': 'Z',
-    '–': '-',   # en dash –
-    '—': '-',   # em dash —
-    '‘': "'",   # left single quote '
-    '’': "'",   # right single quote '
-    '“': '"',   # left double quote "
-    '”': '"',   # right double quote "
-    '…': '...', # ellipsis …
-    '·': '.',   # middle dot ·
-    '×': 'x',   # multiplication sign ×
+    '–': '-', '—': '-',               # en/em dash
+    '‘': "'", '’': "'",               # curly single quotes
+    '“': '"', '”': '"',               # curly double quotes
+    '…': '...', '·': '.', '×': 'x',
 })
 
 
@@ -59,241 +51,249 @@ def _t(s):
     return str(s).translate(_TRANS) if s else ''
 
 
-def _hex_rgb(hex_str):
-    h = (hex_str or 'D9D9D9').lstrip('#').zfill(6)
+def _hex_rgb(h):
+    h = (h or 'D9D9D9').lstrip('#').zfill(6)
     return int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
 
 
-def _is_dark(r, g, b):
-    """True if colour is dark enough to warrant white text on top."""
-    return (r * 299 + g * 587 + b * 114) < 128_000
-
-
-# Palette of distinct, visually pleasing colours for auto-assignment
-_PALETTE = [
-    (37,  99, 235),  # blue
-    (5,  150, 105),  # emerald
-    (217, 70, 239),  # fuchsia
-    (234, 88,  12),  # orange
-    (220, 38,  38),  # red
-    (2,  132, 199),  # sky
-    (101,163,  13),  # lime
-    (168, 85, 247),  # violet
-    (15, 118, 110),  # teal
-    (180, 83,   9),  # amber-dark
-]
-
-
-def _dept_color(dept_name, dept_color_hex):
-    """Return (r, g, b) for a dept badge.
-
-    Uses the stored hex if it's not the default grey,
-    otherwise picks a consistent colour from the palette.
-    """
+def _dept_rgb(dept_name, dept_color_hex):
+    """Vivid (saturated) dept colour – from DB or auto from palette."""
     if dept_color_hex:
-        h = dept_color_hex.lstrip('#').upper()
-        if h not in ('D9D9D9', 'FFFFFF', ''):
+        hx = dept_color_hex.lstrip('#').upper()
+        if hx not in ('D9D9D9', 'FFFFFF', ''):
             return _hex_rgb(dept_color_hex)
-    # Auto-assign from palette based on dept name hash
     idx = sum(ord(c) for c in (dept_name or '')) % len(_PALETTE)
     return _PALETTE[idx]
 
 
+def _pastel(r, g, b, mix=0.20):
+    """Mix vivid colour with white at `mix` ratio → pastel cell background."""
+    return (
+        int(255 - (255 - r) * mix),
+        int(255 - (255 - g) * mix),
+        int(255 - (255 - b) * mix),
+    )
+
+
+def _darken(r, g, b, factor=0.75):
+    """Darken a colour for text on pastel background."""
+    return int(r * factor), int(g * factor), int(b * factor)
+
+
 def generate_week_pdf(plan, grid, brigada_grid, dates, day_names):
-    """Return PDF bytes – A3 landscape, one page, coloured dept badges."""
+    """Return PDF bytes – A3 landscape, Google-Calendar-style coloured cells."""
     try:
         from fpdf import FPDF
     except ImportError:
         raise RuntimeError("fpdf2 neni nainstalovano.")
 
-    # ── Page geometry ──────────────────────────────────────────────────────
+    # ── Geometry ───────────────────────────────────────────────────────────
     PAGE_W, PAGE_H = 420, 297
     MX, MY = 5, 5
-    IW = PAGE_W - 2 * MX           # 410 mm
-    IH = PAGE_H - 2 * MY           # 287 mm
+    IW = PAGE_W - 2 * MX          # 410 mm
+    IH = PAGE_H - 2 * MY          # 287 mm
 
-    TITLE_H = 8
-    DHDR_H  = 7
-    NAME_W  = IW * 0.135           # ~55 mm
-    DAY_W   = (IW - NAME_W) / 7   # ~50 mm
+    TITLE_H = 9
+    DHDR_H  = 8
+    NAME_W  = IW * 0.13           # ~53 mm
+    DAY_W   = (IW - NAME_W) / 7  # ~51 mm
 
     n_reg  = len(grid)
     n_brig = len(brigada_grid)
-    SEP_H  = 4 if brigada_grid else 0
+    SEP_H  = 3.5 if brigada_grid else 0
     avail  = IH - TITLE_H - DHDR_H - SEP_H
     n_rows = n_reg + n_brig
     ROW_H  = max(5.0, avail / n_rows) if n_rows else 7
 
-    # Font sizes
-    FS_NAME  = max(6.0, min(9.0, ROW_H * 1.3))   # employee name
-    FS_TASK  = max(5.5, min(8.5, ROW_H * 1.2))   # task text
-    FS_BADGE = max(5.0, min(7.5, ROW_H * 1.0))   # dept badge label
-    FS_SHIFT = max(4.5, min(7.0, ROW_H * 0.9))   # shift time (smaller)
+    TWO_LINE = ROW_H >= 7.5       # show task + shift on separate lines
 
-    # Dept badge width (fixed fraction of day cell)
-    BADGE_W = min(DAY_W * 0.30, 14.0)
+    FS_TITLE = 11
+    FS_HDR   = 7
+    FS_NAME  = max(6.0, min(9.0,  ROW_H * 1.25))
+    FS_TASK  = max(5.5, min(8.5,  ROW_H * (1.1 if TWO_LINE else 1.2)))
+    FS_SHIFT = max(4.5, min(7.0,  ROW_H * 0.85))
 
-    # ── PDF setup ──────────────────────────────────────────────────────────
+    PAD = 1.5  # inner cell padding mm
+
+    # ── PDF ────────────────────────────────────────────────────────────────
     pdf = FPDF(orientation='L', unit='mm', format='A3')
     pdf.set_auto_page_break(False)
     pdf.add_page()
     pdf.set_margins(MX, MY, MX)
     pdf.set_y(MY)
 
-    # helper: draw a filled + outlined cell manually
-    def rect_cell(x, y, w, h, fill_rgb, text, font_style='', font_size=7,
-                  text_rgb=(26, 26, 26), align='L', padding_l=1.5):
-        pdf.set_fill_color(*fill_rgb)
-        pdf.rect(x, y, w, h, 'F')
-        pdf.set_text_color(*text_rgb)
-        pdf.set_font('Helvetica', font_style, font_size)
-        pdf.set_xy(x + padding_l, y)
-        pdf.cell(w - padding_l, h, text, align=align, border=0)
-
-    # ── Title bar ──────────────────────────────────────────────────────────
-    pdf.set_fill_color(30, 58, 138)
+    # ── Title ──────────────────────────────────────────────────────────────
+    pdf.set_fill_color(15, 40, 110)
+    pdf.rect(MX, MY, IW, TITLE_H, 'F')
     pdf.set_text_color(255, 255, 255)
-    pdf.set_font('Helvetica', 'B', 11)
-    title = (f"Plan smen – tyden {plan['week_number']}/{plan['year']}   "
-             f"{dates[0].strftime('%d.%m.')} – {dates[6].strftime('%d.%m.%Y')}")
-    pdf.cell(IW, TITLE_H, _t(title), border=0, fill=True)
-    pdf.ln(TITLE_H)
+    pdf.set_font('Helvetica', 'B', FS_TITLE)
+    title = _t(
+        f"Plan smen - tyden {plan['week_number']}/{plan['year']}   "
+        f"{dates[0].strftime('%d.%m.')} - {dates[6].strftime('%d.%m.%Y')}"
+    )
+    pdf.set_xy(MX + PAD, MY)
+    pdf.cell(IW - PAD, TITLE_H, title, border=0)
+    pdf.set_y(MY + TITLE_H)
 
-    # ── Day-header row ─────────────────────────────────────────────────────
-    pdf.set_font('Helvetica', 'B', 7)
-    pdf.set_fill_color(30, 58, 138)
-    pdf.set_text_color(255, 255, 255)
-    pdf.cell(NAME_W, DHDR_H, 'Zamestnanec', border=1, fill=True, align='L')
+    # ── Day headers ────────────────────────────────────────────────────────
+    y = pdf.get_y()
+    # "Zamestnanec" header
+    pdf.set_fill_color(30, 55, 150)
+    pdf.rect(MX, y, NAME_W, DHDR_H, 'F')
+    pdf.set_text_color(200, 215, 255)
+    pdf.set_font('Helvetica', 'B', FS_HDR - 0.5)
+    pdf.set_xy(MX + PAD, y)
+    pdf.cell(NAME_W - PAD, DHDR_H, 'Zamestnanec', border=0)
+
+    x = MX + NAME_W
     for i, d in enumerate(dates):
-        if d.weekday() >= 5:
-            pdf.set_fill_color(29, 78, 216)
-        else:
-            pdf.set_fill_color(30, 64, 175)
-        label = f"{_t(day_names[i])} {d.strftime('%d.%m.')}"
-        pdf.cell(DAY_W, DHDR_H, label, border=1, fill=True, align='C')
-    pdf.ln(DHDR_H)
+        wknd = d.weekday() >= 5
+        bg = (45, 70, 180) if wknd else (30, 55, 150)
+        pdf.set_fill_color(*bg)
+        pdf.rect(x, y, DAY_W, DHDR_H, 'F')
+        pdf.set_text_color(200, 215, 255)
+        pdf.set_font('Helvetica', 'B', FS_HDR)
+        pdf.set_xy(x, y)
+        pdf.cell(DAY_W, DHDR_H, _t(f"{day_names[i]} {d.strftime('%d.%m.')}"),
+                 border=0, align='C')
+        x += DAY_W
 
-    # ── Employee row helper ────────────────────────────────────────────────
+    # Outer border for header row
+    pdf.set_draw_color(10, 30, 100)
+    pdf.rect(MX, y, IW, DHDR_H, 'D')
+    pdf.set_y(y + DHDR_H)
+
+    # ── Row drawing ────────────────────────────────────────────────────────
+    GRID_COLOR  = (190, 200, 220)   # cell border colour
+    NAME_BG_E   = (240, 243, 252)   # even row name bg
+    NAME_BG_O   = (248, 250, 255)   # odd  row name bg
+    VOLNO_FG    = (180, 190, 210)
+    NOWORK_BG   = (245, 246, 248)
+
     row_idx = [0]
 
     def draw_row(row, is_brigada=False):
-        emp    = row['employee']
-        name   = _t(emp.get('name', ''))
+        emp   = row['employee']
+        name  = _t(emp.get('name', ''))
         if is_brigada:
-            name += ' B'
+            name += '  B'
+        y0    = pdf.get_y()
+        even  = (row_idx[0] % 2 == 0)
+        n_bg  = NAME_BG_E if even else NAME_BG_O
 
-        even   = row_idx[0] % 2 == 0
-        row_bg = (245, 247, 250) if even else (255, 255, 255)
-        y0     = pdf.get_y()
+        pdf.set_draw_color(*GRID_COLOR)
 
-        # ── Name cell ──
-        name_bg = (235, 240, 255) if even else (241, 245, 255)
-        rect_cell(MX, y0, NAME_W, ROW_H,
-                  fill_rgb=name_bg,
-                  text=name[:26],
-                  font_style='B', font_size=FS_NAME,
-                  text_rgb=(20, 30, 80), padding_l=2)
-        pdf.rect(MX, y0, NAME_W, ROW_H, 'D')
+        # Name cell
+        pdf.set_fill_color(*n_bg)
+        pdf.rect(MX, y0, NAME_W, ROW_H, 'FD')
+        pdf.set_text_color(20, 30, 80)
+        pdf.set_font('Helvetica', 'B', FS_NAME)
+        pdf.set_xy(MX + PAD, y0)
+        pdf.cell(NAME_W - PAD, ROW_H, name[:26], border=0)
 
-        # ── Day cells ──
+        # Day cells
         x = MX + NAME_W
         for day in row['days']:
             a     = day.get('assignment')
             wknd  = day.get('is_weekend', False)
             works = day.get('works_on_day', True)
 
-            base_bg = (230, 235, 255) if wknd else row_bg
-
             if not works and not a:
-                # doesn't work this weekday
-                rect_cell(x, y0, DAY_W, ROW_H,
-                          fill_rgb=(240, 243, 247),
-                          text='', font_size=FS_TASK,
-                          text_rgb=(200, 210, 220))
+                # Doesn't work this weekday
+                pdf.set_fill_color(*NOWORK_BG)
+                pdf.rect(x, y0, DAY_W, ROW_H, 'FD')
 
             elif a is None:
-                # scheduled to work but no shift = volno
-                rect_cell(x, y0, DAY_W, ROW_H,
-                          fill_rgb=base_bg,
-                          text='volno', font_size=FS_TASK,
-                          text_rgb=(160, 175, 195), align='C')
+                # Works but free
+                cell_bg = (230, 235, 248) if wknd else (250, 251, 255)
+                pdf.set_fill_color(*cell_bg)
+                pdf.rect(x, y0, DAY_W, ROW_H, 'FD')
+                pdf.set_text_color(*VOLNO_FG)
+                pdf.set_font('Helvetica', '', FS_SHIFT)
+                pdf.set_xy(x, y0)
+                pdf.cell(DAY_W, ROW_H, 'volno', border=0, align='C')
 
             elif a.get('is_absence'):
-                atype  = a.get('absence_type') or 'jine'
-                fill   = _ABS_FILL.get(atype, (229, 231, 235))
-                tcol   = _ABS_TEXT.get(atype,  (55,  65,  81))
-                label  = _ABS_LABEL.get(atype, 'Jine')
-                rect_cell(x, y0, DAY_W, ROW_H,
-                          fill_rgb=fill, text=label,
-                          font_style='B', font_size=FS_TASK,
-                          text_rgb=tcol, align='C')
+                atype = a.get('absence_type') or 'jine'
+                info  = _ABS.get(atype, _ABS['jine'])
+                pdf.set_fill_color(*info['bg'])
+                pdf.rect(x, y0, DAY_W, ROW_H, 'FD')
+                pdf.set_text_color(*info['fg'])
+                pdf.set_font('Helvetica', 'B', FS_TASK)
+                pdf.set_xy(x, y0)
+                pdf.cell(DAY_W, ROW_H, info['label'], border=0, align='C')
 
             else:
-                # ── Regular assignment with coloured dept badge ──
-                dept       = _t(a.get('dept_name') or '')
-                task       = _t(a.get('task_name') or '')
-                shift      = _t(a.get('shift_name') or '')
-                dr, dg, db = _dept_color(dept, a.get('dept_color') or '')
+                # Regular assignment – Google Calendar style
+                dept      = _t(a.get('dept_name') or '')
+                task      = _t(a.get('task_name') or '')
+                shift     = _t(a.get('shift_name') or '')
+                vr, vg, vb = _dept_rgb(dept, a.get('dept_color') or '')
 
-                # Cell background
-                pdf.set_fill_color(*base_bg)
-                pdf.rect(x, y0, DAY_W, ROW_H, 'F')
+                # Pastel cell background
+                pr, pg, pb = _pastel(vr, vg, vb, mix=0.22 if wknd else 0.18)
+                pdf.set_fill_color(pr, pg, pb)
+                pdf.rect(x, y0, DAY_W, ROW_H, 'FD')
 
-                if dept:
-                    # Coloured dept badge (left side of cell)
-                    badge_text_col = (255, 255, 255) if _is_dark(dr, dg, db) else (30, 30, 30)
-                    pdf.set_fill_color(dr, dg, db)
-                    pdf.rect(x, y0, BADGE_W, ROW_H, 'F')
-                    pdf.set_text_color(*badge_text_col)
-                    pdf.set_font('Helvetica', 'B', FS_BADGE)
-                    pdf.set_xy(x, y0)
-                    pdf.cell(BADGE_W, ROW_H, dept[:4], align='C', border=0)
-                    tx = x + BADGE_W + 1.5
-                    tw = DAY_W - BADGE_W - 1.5
+                # Left accent stripe (3mm) in vivid colour
+                STRIPE = 2.5
+                pdf.set_fill_color(vr, vg, vb)
+                pdf.rect(x, y0, STRIPE, ROW_H, 'F')
+
+                # Text colours: darken the vivid colour for readability
+                dr2, dg2, db2 = _darken(vr, vg, vb, 0.70)
+
+                tx = x + STRIPE + PAD
+                tw = DAY_W - STRIPE - PAD
+
+                if TWO_LINE and (task or dept) and shift:
+                    # Line 1: dept abbrev + task name (bold)
+                    top_h = ROW_H * 0.55
+                    bot_h = ROW_H - top_h
+                    line1 = f"{dept}  {task}".strip() if dept else task
+                    pdf.set_text_color(dr2, dg2, db2)
+                    pdf.set_font('Helvetica', 'B', FS_TASK)
+                    pdf.set_xy(tx, y0 + (ROW_H - top_h - bot_h) / 2)
+                    pdf.cell(tw, top_h, line1, border=0)
+                    # Line 2: shift time
+                    pdf.set_text_color(*_darken(vr, vg, vb, 0.55))
+                    pdf.set_font('Helvetica', '', FS_SHIFT)
+                    pdf.set_xy(tx, y0 + top_h)
+                    pdf.cell(tw, bot_h, shift, border=0)
                 else:
-                    tx = x + 1.5
-                    tw = DAY_W - 1.5
-
-                # Task name (bold)
-                if task:
-                    pdf.set_text_color(20, 20, 20)
+                    # Single line
+                    parts = []
+                    if dept:
+                        parts.append(dept)
+                    if task:
+                        parts.append(task)
+                    if shift:
+                        parts.append(shift)
+                    pdf.set_text_color(dr2, dg2, db2)
                     pdf.set_font('Helvetica', 'B', FS_TASK)
                     pdf.set_xy(tx, y0)
-                    # Two-line if shift fits: top = task, bottom = shift
-                    if shift and ROW_H >= 8:
-                        half = ROW_H / 2
-                        pdf.cell(tw, half, task, border=0, align='L')
-                        pdf.set_text_color(90, 100, 120)
-                        pdf.set_font('Helvetica', '', FS_SHIFT)
-                        pdf.set_xy(tx, y0 + half)
-                        pdf.cell(tw, half, shift, border=0, align='L')
-                    else:
-                        # Single line: task + shift
-                        combined = f'{task}  {shift}'.strip() if shift else task
-                        pdf.cell(tw, ROW_H, combined, border=0, align='L')
+                    pdf.cell(tw, ROW_H, '  '.join(parts), border=0)
 
-            # Cell border
-            pdf.rect(x, y0, DAY_W, ROW_H, 'D')
             x += DAY_W
 
         pdf.set_y(y0 + ROW_H)
         row_idx[0] += 1
 
-    # ── Render ────────────────────────────────────────────────────────────
+    # ── Render employees ───────────────────────────────────────────────────
     for row in grid:
         draw_row(row)
 
     if brigada_grid:
-        y_sep = pdf.get_y()
-        pdf.set_fill_color(220, 228, 255)
-        pdf.rect(MX, y_sep, IW, SEP_H, 'F')
-        pdf.set_text_color(50, 40, 160)
-        pdf.set_font('Helvetica', 'B', 6.5)
-        pdf.set_xy(MX + 2, y_sep)
+        ys = pdf.get_y()
+        pdf.set_fill_color(210, 218, 245)
+        pdf.rect(MX, ys, IW, SEP_H, 'F')
+        pdf.set_draw_color(*GRID_COLOR)
+        pdf.rect(MX, ys, IW, SEP_H, 'D')
+        pdf.set_text_color(50, 60, 160)
+        pdf.set_font('Helvetica', 'B', 6)
+        pdf.set_xy(MX + PAD * 2, ys)
         pdf.cell(IW, SEP_H, 'BRIGADNICI', border=0)
-        pdf.rect(MX, y_sep, IW, SEP_H, 'D')
-        pdf.set_y(y_sep + SEP_H)
-
+        pdf.set_y(ys + SEP_H)
         for row in brigada_grid:
             draw_row(row, is_brigada=True)
 
