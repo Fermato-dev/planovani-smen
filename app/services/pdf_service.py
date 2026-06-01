@@ -159,16 +159,16 @@ def generate_week_pdf(plan, grid, brigada_grid, dates, day_names):
         x += DAY_W
 
     # Outer border for header row
-    pdf.set_draw_color(10, 30, 100)
+    pdf.set_draw_color(5, 20, 80)
     pdf.rect(MX, y, IW, DHDR_H, 'D')
     pdf.set_y(y + DHDR_H)
 
     # ── Row drawing ────────────────────────────────────────────────────────
-    GRID_COLOR  = (190, 200, 220)   # cell border colour
-    NAME_BG_E   = (240, 243, 252)   # even row name bg
-    NAME_BG_O   = (248, 250, 255)   # odd  row name bg
-    VOLNO_FG    = (180, 190, 210)
-    NOWORK_BG   = (245, 246, 248)
+    GRID_COLOR  = ( 90, 105, 140)   # cell border colour – darker for print
+    NAME_BG_E   = (225, 230, 248)   # even row name bg
+    NAME_BG_O   = (238, 241, 255)   # odd  row name bg
+    VOLNO_FG    = (130, 145, 175)
+    NOWORK_BG   = (235, 237, 242)
 
     row_idx = [0]
 
@@ -230,18 +230,18 @@ def generate_week_pdf(plan, grid, brigada_grid, dates, day_names):
                 shift     = _t(a.get('shift_name') or '')
                 vr, vg, vb = _dept_rgb(dept, a.get('dept_color') or '')
 
-                # Pastel cell background
-                pr, pg, pb = _pastel(vr, vg, vb, mix=0.22 if wknd else 0.18)
+                # Coloured cell background – stronger mix for print visibility
+                pr, pg, pb = _pastel(vr, vg, vb, mix=0.45 if wknd else 0.38)
                 pdf.set_fill_color(pr, pg, pb)
                 pdf.rect(x, y0, DAY_W, ROW_H, 'FD')
 
-                # Left accent stripe (3mm) in vivid colour
-                STRIPE = 2.5
+                # Left accent stripe in vivid colour
+                STRIPE = 3.0
                 pdf.set_fill_color(vr, vg, vb)
                 pdf.rect(x, y0, STRIPE, ROW_H, 'F')
 
-                # Text colours: darken the vivid colour for readability
-                dr2, dg2, db2 = _darken(vr, vg, vb, 0.70)
+                # Text colours: strong dark for print readability
+                dr2, dg2, db2 = _darken(vr, vg, vb, 0.45)
 
                 tx = x + STRIPE + PAD
                 tw = DAY_W - STRIPE - PAD
@@ -255,7 +255,7 @@ def generate_week_pdf(plan, grid, brigada_grid, dates, day_names):
                     pdf.set_font('Helvetica', 'B', FS_TASK)
                     pdf.set_xy(tx, y0 + (ROW_H - top_h - bot_h) / 2)
                     pdf.cell(tw, top_h, line1, border=0)
-                    # Line 2: shift time
+                    # Line 2: shift time – slightly lighter but still readable
                     pdf.set_text_color(*_darken(vr, vg, vb, 0.55))
                     pdf.set_font('Helvetica', '', FS_SHIFT)
                     pdf.set_xy(tx, y0 + top_h)
