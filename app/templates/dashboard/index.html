@@ -9,36 +9,50 @@
     </div>
 </div>
 
-<div class="row g-3 mb-4">
-    <div class="col-md-4">
-        <div class="stat-card teal">
-            <i class="bi bi-people stat-card-icon"></i>
-            <div class="stat-card-number">{{ employees|length }}</div>
-            <div class="stat-card-label">Aktivnich zamestnancu</div>
-            <a href="{{ url_for('employees.index') }}" class="btn btn-sm btn-outline-primary mt-3">
-                <i class="bi bi-people"></i> Spravovat
-            </a>
-        </div>
+{# ── Dnešní obsazení ── #}
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-person-check me-1"></i> Dnes v práci – {{ now.strftime('%d.%m.%Y') }}</span>
+        <a href="{{ url_for('planner.index') }}"
+           class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-table"></i> Plán směn
+        </a>
     </div>
-    <div class="col-md-4">
-        <div class="stat-card green">
-            <i class="bi bi-building stat-card-icon"></i>
-            <div class="stat-card-number">{{ departments|length }}</div>
-            <div class="stat-card-label">Oddeleni</div>
-            <a href="{{ url_for('settings.index') }}" class="btn btn-sm btn-outline-success mt-3">
-                <i class="bi bi-gear"></i> Nastaveni
-            </a>
+    <div class="card-body p-3">
+    {% if today_dept_summary %}
+        {# Departments row #}
+        <div class="d-flex flex-wrap gap-2 mb-3">
+        {% for dept in today_dept_summary %}
+            {% set color = dept['color'] or '#6b7280' %}
+            <div class="d-flex align-items-center gap-1 px-3 py-2 rounded-2"
+                 style="background:{{ color }}22; border:1.5px solid {{ color }}; min-width:120px;">
+                <span class="fw-bold" style="color:{{ color }}; font-size:1.35rem; line-height:1;">{{ dept['staff_count'] }}</span>
+                <span class="ms-1 text-muted small">{{ dept['name'] }}</span>
+            </div>
+        {% endfor %}
         </div>
-    </div>
-    <div class="col-md-4">
-        <div class="stat-card purple">
-            <i class="bi bi-clock stat-card-icon"></i>
-            <div class="stat-card-number">{{ shifts|length }}</div>
-            <div class="stat-card-label">Typy smen</div>
-            <a href="{{ url_for('settings.index') }}" class="btn btn-sm btn-outline-info mt-3">
-                <i class="bi bi-clock"></i> Nastaveni
-            </a>
+
+        {# Task coverage #}
+        {% if today_task_summary %}
+        <div class="d-flex flex-wrap gap-2">
+        {% for task in today_task_summary %}
+            {% set color = task['dept_color'] or '#6b7280' %}
+            {% set ok = (task['max_staff'] is none) or (task['staff_count'] >= 1) %}
+            <span class="badge rounded-pill px-2 py-1"
+                  style="background:{{ color }}18; color:{{ color }}; border:1px solid {{ color }}; font-size:.8rem; font-weight:600;">
+                <i class="bi bi-{{ 'check-circle' if ok else 'exclamation-circle' }} me-1"></i>{{ task['staff_count'] }}× {{ task['name'] }}
+            </span>
+        {% endfor %}
         </div>
+        {% endif %}
+
+    {% else %}
+        <div class="text-muted small py-2">
+            <i class="bi bi-calendar-x me-1"></i>
+            Pro tento týden zatím není vytvořený plán.
+            <a href="{{ url_for('planner.index') }}" class="ms-2">Vytvořit plán</a>
+        </div>
+    {% endif %}
     </div>
 </div>
 

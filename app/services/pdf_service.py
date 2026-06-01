@@ -80,12 +80,25 @@ def _darken(r, g, b, factor=0.75):
     return int(r * factor), int(g * factor), int(b * factor)
 
 
+def _has_any_work(row):
+    """Return True if employee has at least one day with a real work assignment."""
+    for day in row['days']:
+        a = day.get('assignment')
+        if a and not a.get('is_absence'):
+            return True
+    return False
+
+
 def generate_week_pdf(plan, grid, brigada_grid, dates, day_names):
     """Return PDF bytes – A3 landscape, Google-Calendar-style coloured cells."""
     try:
         from fpdf import FPDF
     except ImportError:
         raise RuntimeError("fpdf2 neni nainstalovano.")
+
+    # Filter out employees with no real work assignment the entire week
+    grid         = [r for r in grid         if _has_any_work(r)]
+    brigada_grid = [r for r in brigada_grid if _has_any_work(r)]
 
     # ── Geometry ───────────────────────────────────────────────────────────
     PAGE_W, PAGE_H = 420, 297
@@ -165,10 +178,10 @@ def generate_week_pdf(plan, grid, brigada_grid, dates, day_names):
 
     # ── Row drawing ────────────────────────────────────────────────────────
     GRID_COLOR  = ( 90, 105, 140)   # cell border colour – darker for print
-    NAME_BG_E   = (225, 230, 248)   # even row name bg
-    NAME_BG_O   = (238, 241, 255)   # odd  row name bg
+    NAME_BG_E   = (220, 222, 226)   # even row name bg – neutral gray
+    NAME_BG_O   = (232, 234, 237)   # odd  row name bg – neutral gray
     VOLNO_FG    = (130, 145, 175)
-    NOWORK_BG   = (235, 237, 242)
+    NOWORK_BG   = (240, 241, 243)
 
     row_idx = [0]
 
@@ -296,5 +309,13 @@ def generate_week_pdf(plan, grid, brigada_grid, dates, day_names):
         pdf.set_y(ys + SEP_H)
         for row in brigada_grid:
             draw_row(row, is_brigada=True)
+
+    # ── Outer border around entire grid ───────────────────────────────────
+    grid_top = MY + TITLE_H + DHDR_H
+    grid_bottom = pdf.get_y()
+    pdf.set_draw_color(5, 20, 80)
+    pdf.set_line_width(0.5)
+    pdf.rect(MX, MY, IW, grid_bottom - MY, 'D')
+    pdf.set_line_width(0.2)   # reset
 
     return bytes(pdf.output())

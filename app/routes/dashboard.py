@@ -7,7 +7,9 @@ from app.models.employee import get_all_employees
 from app.models.department import get_all_departments
 from app.models.shift import get_all_shifts
 from app.models.constraint import get_constraints_for_month, _parse_date
+from app.models.plan import get_plan_by_week, get_day_summary, get_day_task_summary
 from app.utils.holidays import get_czech_holidays
+from app.services.planner_service import get_monday
 
 bp = Blueprint('dashboard', __name__)
 
@@ -90,18 +92,29 @@ def _build_calendar_ctx(year, month):
     )
 
 
+def _build_today_staffing(today):
+    """Return today's staffing by dept and task, or None if no plan exists."""
+    monday = get_monday(today)
+    plan = get_plan_by_week(monday.isoformat())
+    if not plan:
+        return None, None
+    ds = today.isoformat()
+    dept_summary = get_day_summary(plan['id'], ds)
+    task_summary = get_day_task_summary(plan['id'], ds)
+    return dept_summary, task_summary
+
+
 @bp.route('/')
 def index():
     today = date.today()
     employees   = get_all_employees()
-    departments = get_all_departments()
-    shifts      = get_all_shifts()
     cal_ctx     = _build_calendar_ctx(today.year, today.month)
+    today_dept_summary, today_task_summary = _build_today_staffing(today)
     return render_template('dashboard/index.html',
                            employees=employees,
-                           departments=departments,
-                           shifts=shifts,
                            now=today,
+                           today_dept_summary=today_dept_summary,
+                           today_task_summary=today_task_summary,
                            **cal_ctx)
 
 
