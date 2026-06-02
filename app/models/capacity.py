@@ -371,12 +371,19 @@ def board_assign_to_task(plan_id, employee_id, date_str, task_id):
         )
         assignment_id = cur.lastrowid
 
+    # Zaměstnanec má jednu směnu → smí být na nejvýše jedné práci za den.
+    # Odeber všechna stará přiřazení k pracím (přesun, ne duplikace).
+    db.execute(
+        "DELETE FROM board_task_assignments WHERE assignment_id=?",
+        (assignment_id,)
+    )
+
     db.execute(
         "INSERT OR IGNORE INTO board_day_tasks (plan_id, date, task_id) VALUES (?,?,?)",
         (plan_id, date_str, task_id)
     )
     db.execute(
-        "INSERT OR IGNORE INTO board_task_assignments (assignment_id, task_id) VALUES (?,?)",
+        "INSERT INTO board_task_assignments (assignment_id, task_id) VALUES (?,?)",
         (assignment_id, task_id)
     )
     db.commit()

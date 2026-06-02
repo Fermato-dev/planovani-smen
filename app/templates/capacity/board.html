@@ -56,17 +56,12 @@ document.addEventListener('DOMContentLoaded', function () {
 {% set day_brigada = brigada_per_day.get(ds, {'available': [], 'on_board': [], 'absent': []}) %}
 {% set editable = not holiday_map.get(ds) and not vacation_map.get(ds) %}
 
-{# Počty na nástěnce per oddělení (napl = přiřazeni k práci) — unique employees #}
+{# Počty na nástěnce per oddělení (napl = přiřazeni k práci) #}
 {% set dept_placed = {} %}
 {% for dept in vyroba_depts + expedice_depts %}
-    {% set cnt = namespace(n=0, seen=[]) %}
+    {% set cnt = namespace(n=0) %}
     {% for td in day_board.get(dept.id, {}).values() %}
-        {% for emp in td.employees %}
-            {% if emp.employee_id not in cnt.seen %}
-                {% set cnt.n = cnt.n + 1 %}
-                {% set cnt.seen = cnt.seen + [emp.employee_id] %}
-            {% endif %}
-        {% endfor %}
+        {% set cnt.n = cnt.n + (td.employees | length) %}
     {% endfor %}
     {% set _ = dept_placed.update({dept.id: cnt.n}) %}
 {% endfor %}
